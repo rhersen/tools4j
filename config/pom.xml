@@ -20,6 +20,7 @@
     <module>config-admin</module>
     <module>config-provider</module>
     <module>config-core</module>
+    <module>config-osgi-support</module>
     <module>config-tck</module>
     <module>config-examples</module>
     <module>config-docbkx</module>
@@ -95,6 +96,12 @@
       <dependency>
         <groupId>org.deephacks.tools4j</groupId>
         <artifactId>config-core</artifactId>
+        <version>${version.tools4j.config}</version>
+        <scope>compile</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.deephacks.tools4j</groupId>
+        <artifactId>config-osgi</artifactId>
         <version>${version.tools4j.config}</version>
         <scope>compile</scope>
       </dependency>

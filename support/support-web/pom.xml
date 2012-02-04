@@ -20,9 +20,6 @@
           <manifestLocation>META-INF</manifestLocation>
           <instructions>
             <Export-Package>org.deephacks.tools4j.support.web</Export-Package>
-            <Import-Package>
-              com.google.guava
-            </Import-Package>
           </instructions>
         </configuration>
         <executions>

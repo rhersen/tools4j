@@ -24,9 +24,8 @@
           <manifestLocation>META-INF</manifestLocation>
           <instructions>
             <Export-Package>org.deephacks.tools4j.config.model</Export-Package>
-            <Import-Package>
-              com.google.guava
-            </Import-Package>
+            <Embed-Dependency>*</Embed-Dependency>
+            <Embed-Transitive>true</Embed-Transitive>
           </instructions>
         </configuration>
         <executions>
