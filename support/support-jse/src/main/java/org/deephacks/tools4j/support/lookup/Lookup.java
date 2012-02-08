@@ -16,7 +16,6 @@ package org.deephacks.tools4j.support.lookup;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.deephacks.tools4j.support.lookup.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,8 +89,17 @@ public class Lookup extends LookupProvider {
         return null;
     }
 
+    public void registerLookup(LookupProvider provider) {
+        lookupProviders.add(provider);
+    }
+
+    public void unregisterLookup(LookupProvider provider) {
+        lookupProviders.remove(provider);
+    }
+
     public String toString() {
         return Objects.toStringHelper(Lookup.class).add("LOOKUP", LOOKUP.getClass().getName())
                 .add("lookupProviders", lookupProviders).toString();
     }
+
 }

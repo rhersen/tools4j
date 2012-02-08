@@ -19,6 +19,7 @@ vi:ts=2:sw=2:expandtab:
   <modules>
     <module>support-jse</module>
     <module>support-web</module>
+    <module>support-osgi</module>
     <module>support-test</module>
   </modules>
 

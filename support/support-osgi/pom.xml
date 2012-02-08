@@ -5,20 +5,12 @@
     <artifactId>support-root</artifactId>
     <version>1</version>
   </parent>
-  <artifactId>support-jse</artifactId>
+  <artifactId>support-osgi</artifactId>
   <version>0.0.0.x</version>
   <packaging>jar</packaging>
-  <name>Tools4j Support Java SE</name>
+  <name>Tools4j Support OSGi</name>
   <build>
     <plugins>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <groupId>org.apache.maven.plugins</groupId>
-        <version>${version.compiler-plugin}</version>
-        <configuration>
-          <compilerArgument>-proc:none</compilerArgument>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
@@ -27,10 +19,9 @@
         <configuration>
           <manifestLocation>META-INF</manifestLocation>
           <instructions>
-            <Export-Package>
-              org.deephacks.tools4j.support,
-              org.deephacks.tools4j.support.*
-            </Export-Package>
+            <Bundle-Activator>
+              org.deephacks.tools4j.osgi.LookupActivator
+            </Bundle-Activator>
           </instructions>
         </configuration>
         <executions>
@@ -57,16 +48,23 @@
     <dependency>
       <groupId>com.googlecode.guava-osgi</groupId>
       <artifactId>guava-osgi</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.aries</groupId>
-      <artifactId>org.apache.aries.util</artifactId>
-      <version>0.4</version>
+      <groupId>org.deephacks.tools4j</groupId>
+      <artifactId>support-jse</artifactId>
+      <scope>compile</scope>
+      <version>0.0.0.x</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.aries.blueprint</groupId>
-      <artifactId>org.apache.aries.blueprint.core</artifactId>
-      <version>0.4</version>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.core</artifactId>
+      <version>4.3.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.compendium</artifactId>
+      <version>4.2.0</version>
     </dependency>
   </dependencies>
 </project>
