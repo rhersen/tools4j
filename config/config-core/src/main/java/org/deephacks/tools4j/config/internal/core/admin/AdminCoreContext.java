@@ -26,6 +26,7 @@ import java.util.Map;
 import org.deephacks.tools4j.config.admin.AdminContext;
 import org.deephacks.tools4j.config.internal.core.runtime.BeanToObjectConverter;
 import org.deephacks.tools4j.config.internal.core.xml.XmlBeanManager;
+import org.deephacks.tools4j.config.internal.core.xml.XmlSchemaManager;
 import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
 import org.deephacks.tools4j.config.model.BeanUtils;
@@ -34,6 +35,7 @@ import org.deephacks.tools4j.config.model.Schema.SchemaPropertyRef;
 import org.deephacks.tools4j.config.spi.BeanManager;
 import org.deephacks.tools4j.config.spi.SchemaManager;
 import org.deephacks.tools4j.config.spi.ValidationManager;
+import org.deephacks.tools4j.support.ServiceProvider;
 import org.deephacks.tools4j.support.SystemProperties;
 import org.deephacks.tools4j.support.conversion.Conversion;
 import org.deephacks.tools4j.support.lookup.Lookup;
@@ -43,6 +45,7 @@ import org.deephacks.tools4j.support.lookup.Lookup;
  * context so that no dependencies (compile nor runtime) exist between them.
  *   
  */
+@ServiceProvider(service = AdminContext.class)
 public class AdminCoreContext extends AdminContext {
     private BeanManager beanManager;
     private SchemaManager schemaManager;
@@ -51,7 +54,7 @@ public class AdminCoreContext extends AdminContext {
 
     public AdminCoreContext() {
         beanManager = lookupBeanManager();
-        schemaManager = Lookup.get().lookup(SchemaManager.class);
+        schemaManager = lookupSchemaManager();
         validationManager = Lookup.get().lookup(ValidationManager.class);
         conversion.register(new BeanToObjectConverter());
     }
@@ -354,7 +357,7 @@ public class AdminCoreContext extends AdminContext {
         }
         String preferedBeanManager = SystemProperties.createDefault().get("config.beanmanager");
         if (preferedBeanManager == null || "".equals(preferedBeanManager)) {
-            return beanManagers.iterator().next();
+            return new XmlBeanManager();
         }
         for (BeanManager beanManager : beanManagers) {
             if (beanManager.getClass().getName().equals(preferedBeanManager)) {
@@ -362,6 +365,23 @@ public class AdminCoreContext extends AdminContext {
             }
         }
         return new XmlBeanManager();
+    }
+
+    private static SchemaManager lookupSchemaManager() {
+        Collection<SchemaManager> schemaManagers = Lookup.get().lookupAll(SchemaManager.class);
+        if (schemaManagers.size() == 1) {
+            return schemaManagers.iterator().next();
+        }
+        String preferedSchemaManager = SystemProperties.createDefault().get("config.schemamanager");
+        if (preferedSchemaManager == null || "".equals(preferedSchemaManager)) {
+            return new XmlSchemaManager();
+        }
+        for (SchemaManager schemaManager : schemaManagers) {
+            if (schemaManager.getClass().getName().equals(preferedSchemaManager)) {
+                return schemaManager;
+            }
+        }
+        return new XmlSchemaManager();
     }
 
     private void setSingletonReferences(Bean bean, Map<String, Schema> schemas) {

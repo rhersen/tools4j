@@ -25,6 +25,7 @@ import org.deephacks.tools4j.config.admin.AdminContext;
 import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.model.Schema;
 import org.deephacks.tools4j.support.event.AbortRuntimeException;
+import org.deephacks.tools4j.support.lookup.Lookup;
 import org.primefaces.model.DefaultTreeNode;
 import org.primefaces.model.TreeNode;
 
@@ -34,6 +35,7 @@ public class JsfAdminTree extends DefaultTreeNode {
     private static final long serialVersionUID = 6266276692145772015L;
     private TreeNode selectedNode;
     private DefaultTreeNode root;
+    AdminContext admin = Lookup.get().lookup(AdminContext.class);
 
     public JsfAdminTree() {
         super();
@@ -88,7 +90,7 @@ public class JsfAdminTree extends DefaultTreeNode {
         }
         FacesContext fc = FacesContext.getCurrentInstance();
         try {
-            AdminContext.get().delete(selectedBean.bean.getBean().getId());
+            admin.delete(selectedBean.bean.getBean().getId());
             fc.addMessage(null, new FacesMessage("Operation successful", "Bean was deleted."));
             clearCache();
         } catch (AbortRuntimeException e) {
@@ -124,10 +126,9 @@ public class JsfAdminTree extends DefaultTreeNode {
             return root;
         }
         root = new DefaultTreeNode("Root", null);
-        AdminContext ctx = AdminContext.get();
-        for (Schema s : ctx.getSchemas().values()) {
+        for (Schema s : admin.getSchemas().values()) {
             DefaultTreeNode schema = new DefaultTreeNode(new Node(new JsfAdminBean(s, this)), root);
-            List<Bean> beans = ctx.list(s.getName());
+            List<Bean> beans = admin.list(s.getName());
             for (Bean bean : beans) {
                 new DefaultTreeNode(new Node(new JsfAdminBean(bean, this)), schema);
             }

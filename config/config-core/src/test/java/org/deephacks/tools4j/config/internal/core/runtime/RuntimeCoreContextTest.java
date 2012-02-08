@@ -26,6 +26,9 @@ import java.util.List;
 
 import org.deephacks.tools4j.config.Config;
 import org.deephacks.tools4j.config.Id;
+import org.deephacks.tools4j.config.RuntimeContext;
+import org.deephacks.tools4j.config.admin.AdminContext;
+import org.deephacks.tools4j.config.internal.core.admin.AdminCoreContext;
 import org.deephacks.tools4j.config.internal.core.xml.XmlBeanManager;
 import org.deephacks.tools4j.config.internal.core.xml.XmlSchemaManager;
 import org.deephacks.tools4j.config.model.Bean;
@@ -47,6 +50,8 @@ public class RuntimeCoreContextTest extends ConfigDefaultSetup {
         XmlStorageHelper.clearAndInit(RuntimeCoreContextTest.class);
         MockLookup.setMockInstances(BeanManager.class, new XmlBeanManager());
         MockLookup.addMockInstances(SchemaManager.class, new XmlSchemaManager());
+        MockLookup.addMockInstances(RuntimeContext.class, new RuntimeCoreContext());
+        MockLookup.addMockInstances(AdminContext.class, new AdminCoreContext());
         setupDefaultConfigData();
 
     }

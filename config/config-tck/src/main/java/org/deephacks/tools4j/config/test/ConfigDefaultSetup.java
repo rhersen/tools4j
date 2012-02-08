@@ -26,6 +26,7 @@ import org.deephacks.tools4j.config.test.ConfigTestData.JSR303Validation;
 import org.deephacks.tools4j.config.test.ConfigTestData.Parent;
 import org.deephacks.tools4j.config.test.ConfigTestData.Singleton;
 import org.deephacks.tools4j.config.test.ConfigTestData.SingletonParent;
+import org.deephacks.tools4j.support.lookup.Lookup;
 
 import com.google.common.collect.ImmutableList;
 
@@ -46,11 +47,11 @@ public abstract class ConfigDefaultSetup {
 
     protected void setupDefaultConfigData() {
         if (runtime == null) {
-            runtime = RuntimeContext.get();
+            runtime = Lookup.get().lookup(RuntimeContext.class);
         }
 
         if (admin == null) {
-            admin = AdminContext.get();
+            admin = Lookup.get().lookup(AdminContext.class);
         }
         sp1 = testdata.getSingletonParent("sp1");
         s1 = testdata.getSingleton();

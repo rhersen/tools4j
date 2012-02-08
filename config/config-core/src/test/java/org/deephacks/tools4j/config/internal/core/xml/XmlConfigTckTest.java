@@ -13,6 +13,10 @@
  */
 package org.deephacks.tools4j.config.internal.core.xml;
 
+import org.deephacks.tools4j.config.RuntimeContext;
+import org.deephacks.tools4j.config.admin.AdminContext;
+import org.deephacks.tools4j.config.internal.core.admin.AdminCoreContext;
+import org.deephacks.tools4j.config.internal.core.runtime.RuntimeCoreContext;
 import org.deephacks.tools4j.config.spi.BeanManager;
 import org.deephacks.tools4j.config.spi.SchemaManager;
 import org.deephacks.tools4j.config.spi.ValidationManager;
@@ -26,6 +30,8 @@ public class XmlConfigTckTest extends ConfigTckTests {
     @Override
     public void before() {
         XmlStorageHelper.clearAndInit(XmlConfigTckTest.class);
+        MockLookup.addMockInstances(RuntimeContext.class, new RuntimeCoreContext());
+        MockLookup.addMockInstances(AdminContext.class, new AdminCoreContext());
         MockLookup.setMockInstances(BeanManager.class, new XmlBeanManager());
         MockLookup.addMockInstances(SchemaManager.class, new XmlSchemaManager());
         MockLookup.addMockInstances(ValidationManager.class, new Jsr303ValidationManager());

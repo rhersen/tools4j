@@ -21,6 +21,7 @@ import org.deephacks.tools4j.config.Config;
 import org.deephacks.tools4j.config.Id;
 import org.deephacks.tools4j.config.RuntimeContext;
 import org.deephacks.tools4j.config.internal.core.xml.XmlBeanManager;
+import org.deephacks.tools4j.config.internal.core.xml.XmlSchemaManager;
 import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
 import org.deephacks.tools4j.config.model.Events;
@@ -29,6 +30,7 @@ import org.deephacks.tools4j.config.model.Schema.SchemaPropertyRef;
 import org.deephacks.tools4j.config.spi.BeanManager;
 import org.deephacks.tools4j.config.spi.SchemaManager;
 import org.deephacks.tools4j.config.spi.ValidationManager;
+import org.deephacks.tools4j.support.ServiceProvider;
 import org.deephacks.tools4j.support.SystemProperties;
 import org.deephacks.tools4j.support.conversion.Conversion;
 import org.deephacks.tools4j.support.lookup.Lookup;
@@ -41,6 +43,7 @@ import com.google.common.collect.Lists;
  * RuntimeCoreContext is responsible for separating the admin, runtime and spi 
  * context so that no dependencies (compile nor runtime) exist between them.
  */
+@ServiceProvider(service = RuntimeContext.class)
 public class RuntimeCoreContext extends RuntimeContext {
     private Conversion conversion = Conversion.get();
     private SchemaManager schemaManager;
@@ -51,7 +54,7 @@ public class RuntimeCoreContext extends RuntimeContext {
         conversion.register(new ClassToSchemaConverter());
         conversion.register(new FieldToSchemaPropertyConverter());
         conversion.register(new BeanToObjectConverter());
-        schemaManager = Lookup.get().lookup(SchemaManager.class);
+        schemaManager = lookupSchemaManager();
         beanManager = lookupBeanManager();
         validationManager = Lookup.get().lookup(ValidationManager.class);
     }
@@ -179,7 +182,7 @@ public class RuntimeCoreContext extends RuntimeContext {
         }
         String preferedBeanManager = SystemProperties.createDefault().get("config.beanmanager");
         if (preferedBeanManager == null || "".equals(preferedBeanManager)) {
-            return beanManagers.iterator().next();
+            return new XmlBeanManager();
         }
         for (BeanManager beanManager : beanManagers) {
             if (beanManager.getClass().getName().equals(preferedBeanManager)) {
@@ -187,5 +190,22 @@ public class RuntimeCoreContext extends RuntimeContext {
             }
         }
         return new XmlBeanManager();
+    }
+
+    private static SchemaManager lookupSchemaManager() {
+        Collection<SchemaManager> schemaManagers = Lookup.get().lookupAll(SchemaManager.class);
+        if (schemaManagers.size() == 1) {
+            return schemaManagers.iterator().next();
+        }
+        String preferedSchemaManager = SystemProperties.createDefault().get("config.schemamanager");
+        if (preferedSchemaManager == null || "".equals(preferedSchemaManager)) {
+            return new XmlSchemaManager();
+        }
+        for (SchemaManager schemaManager : schemaManagers) {
+            if (schemaManager.getClass().getName().equals(preferedSchemaManager)) {
+                return schemaManager;
+            }
+        }
+        return new XmlSchemaManager();
     }
 }

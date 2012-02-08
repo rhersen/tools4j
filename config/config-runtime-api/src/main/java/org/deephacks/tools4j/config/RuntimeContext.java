@@ -57,14 +57,6 @@ public abstract class RuntimeContext {
         }
     }
 
-    public static RuntimeContext get() {
-        try {
-            return (RuntimeContext) Class.forName(CORE_IMPL).newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     /**
      * If @Config changes name between upgrades, the new schema will be registered as 
      * a new while the old one will persist. 

@@ -18,8 +18,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.deephacks.tools4j.config.model.Bean;
-import org.deephacks.tools4j.config.model.Schema;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
+import org.deephacks.tools4j.config.model.Schema;
 import org.deephacks.tools4j.support.event.AbortRuntimeException;
 
 /**
@@ -53,14 +53,6 @@ public abstract class AdminContext {
         if (!getClass().getName().equals(CORE_IMPL)) {
             throw new IllegalArgumentException("Only AdminCoreContext is allowed to"
                     + "implement this interface.");
-        }
-    }
-
-    public static AdminContext get() {
-        try {
-            return (AdminContext) Class.forName(CORE_IMPL).newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
     }
 

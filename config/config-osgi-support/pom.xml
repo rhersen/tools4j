@@ -3,9 +3,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <parent>
     <groupId>org.deephacks.tools4j</groupId>
-    <artifactId>config-admin-rcp-root</artifactId>
+    <artifactId>config-root</artifactId>
     <version>1</version>
   </parent>
+
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.deephacks.tools4j</groupId>
   <artifactId>config-osgi-support</artifactId>
@@ -23,6 +24,9 @@
         <configuration>
           <manifestLocation>META-INF</manifestLocation>
           <instructions>
+            <Bundle-Activator>
+              org.deephacks.tools4j.config.internal.core.Activator
+            </Bundle-Activator>
             <!-- Package third-party jars in this bundle -->
             <Embed-Dependency>
               shrinkwrap-api,
@@ -63,6 +67,15 @@
       <groupId>org.jboss.shrinkwrap</groupId>
       <artifactId>shrinkwrap-impl-base</artifactId>
       <version>1.0.0-cr-2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.deephacks.tools4j</groupId>
+      <artifactId>config-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.enterprise</artifactId>
+      <version>4.2.0</version>
     </dependency>
     <dependency>
       <groupId>org.osgi</groupId>

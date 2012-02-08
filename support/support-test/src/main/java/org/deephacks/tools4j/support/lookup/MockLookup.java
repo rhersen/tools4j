@@ -16,8 +16,6 @@ package org.deephacks.tools4j.support.lookup;
 import java.lang.reflect.Field;
 import java.util.Collection;
 
-import org.deephacks.tools4j.support.lookup.Lookup;
-
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
@@ -31,16 +29,20 @@ public class MockLookup extends Lookup {
     public <T> T lookup(Class<T> clazz) {
         @SuppressWarnings("unchecked")
         Collection<T> result = (Collection<T>) instances.get(clazz);
-        if (result.size() == 0) {
-            return null;
+        if (result.size() != 0) {
+            return result.iterator().next();
         }
-        return result.iterator().next();
+        return super.lookup(clazz);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> Collection<T> lookupAll(Class<T> clazz) {
-        return (Collection<T>) instances.get(clazz);
+        Collection<T> result = (Collection<T>) instances.get(clazz);
+        if (result.size() != 0) {
+            return result;
+        }
+        return super.lookupAll(clazz);
     }
 
     public static void setMockInstances(Class<?> clazz, Object... instances) {

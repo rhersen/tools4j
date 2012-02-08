@@ -29,6 +29,10 @@ import java.util.List;
 
 import javax.persistence.EntityManagerFactory;
 
+import org.deephacks.tools4j.config.RuntimeContext;
+import org.deephacks.tools4j.config.admin.AdminContext;
+import org.deephacks.tools4j.config.internal.core.admin.AdminCoreContext;
+import org.deephacks.tools4j.config.internal.core.runtime.RuntimeCoreContext;
 import org.deephacks.tools4j.config.internal.core.xml.XmlSchemaManager;
 import org.deephacks.tools4j.config.spi.BeanManager;
 import org.deephacks.tools4j.config.spi.SchemaManager;
@@ -93,7 +97,9 @@ public class JpaConfigTckTest extends ConfigTckTests {
      */
     public void before() {
         XmlStorageHelper.clearAndInit(JpaConfigTckTest.class);
-        MockLookup.setMockInstances(BeanManager.class, new Jpa20BeanManager());
+        MockLookup.setMockInstances(RuntimeContext.class, new RuntimeCoreContext());
+        MockLookup.addMockInstances(AdminContext.class, new AdminCoreContext());
+        MockLookup.addMockInstances(BeanManager.class, new Jpa20BeanManager());
         MockLookup.addMockInstances(SchemaManager.class, new XmlSchemaManager());
         MockLookup.addMockInstances(ValidationManager.class, new Jsr303ValidationManager());
         File targetDir = JUnitUtils.getMavenProjectChildFile(Jpa20BeanManager.class, "target");

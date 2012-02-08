@@ -29,6 +29,7 @@ import org.deephacks.tools4j.config.spi.BeanManager;
 import org.deephacks.tools4j.config.spi.SchemaManager;
 import org.deephacks.tools4j.config.spi.ValidationManager;
 import org.deephacks.tools4j.internal.core.jsr303.Jsr303ValidationManager;
+import org.deephacks.tools4j.support.lookup.Lookup;
 import org.deephacks.tools4j.support.lookup.MockLookup;
 import org.deephacks.tools4j.support.test.Database;
 import org.deephacks.tools4j.support.test.JUnitUtils;
@@ -49,11 +50,12 @@ public class FamilyTest {
         MockLookup.addMockInstances(ValidationManager.class, new Jsr303ValidationManager());
         MockLookup.addMockInstances(SchemaManager.class, new XmlSchemaManager());
         MockLookup.addMockInstances(BeanManager.class, new Jpa20BeanManager());
-        AdminContext admin = AdminContext.get();
+        AdminContext admin = Lookup.get().lookup(AdminContext.class);
+        RuntimeContext runtime = Lookup.get().lookup(RuntimeContext.class);
         EntityManagerFactory factory = EntityManagerFactoryCreator
                 .createFactory("tools4j-config-jpa-unit");
         ThreadLocalEntityManager.createEm(factory);
-        RuntimeContext.get().register(Person.class, Marriage.class);
+        runtime.register(Person.class, Marriage.class);
         Bean child1 = createFamily("1", "MALE");
         Bean child2 = createFamily("2", "FEMALE");
         Bean child3 = createFamily("3", "MALE");

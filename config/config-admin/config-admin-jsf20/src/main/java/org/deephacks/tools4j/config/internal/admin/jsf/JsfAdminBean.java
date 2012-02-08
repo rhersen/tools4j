@@ -38,6 +38,7 @@ import org.deephacks.tools4j.config.model.Schema.SchemaPropertyRef;
 import org.deephacks.tools4j.config.model.Schema.SchemaPropertyRefList;
 import org.deephacks.tools4j.config.model.Schema.SchemaPropertyRefMap;
 import org.deephacks.tools4j.support.event.AbortRuntimeException;
+import org.deephacks.tools4j.support.lookup.Lookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +46,7 @@ public class JsfAdminBean {
     private Logger log = LoggerFactory.getLogger(JsfAdminBean.class);
     private Bean bean;
     private Schema schema;
-    private AdminContext ctx = AdminContext.get();
+    private AdminContext ctx = Lookup.get().lookup(AdminContext.class);
     private IdProperty id;
     private List<BasicProperty> basicProperties = new ArrayList<BasicProperty>();
     private List<BasicPropertyList> basicListProperties = new ArrayList<BasicPropertyList>();

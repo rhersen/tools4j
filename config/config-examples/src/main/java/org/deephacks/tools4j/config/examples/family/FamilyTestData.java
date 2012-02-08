@@ -16,8 +16,10 @@ package org.deephacks.tools4j.config.examples.family;
 import org.deephacks.tools4j.config.admin.AdminContext;
 import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
+import org.deephacks.tools4j.support.lookup.Lookup;
 
 public class FamilyTestData {
+    static AdminContext admin = Lookup.get().lookup(AdminContext.class);
 
     public static Bean createFamily(String prefix, String childGender) {
         int counter = 0;
@@ -30,7 +32,7 @@ public class FamilyTestData {
         male.addReference("children", child.getId());
         FEMALE.addReference("children", child.getId());
         marriage.addReference("children", child.getId());
-        AdminContext admin = AdminContext.get();
+
         admin.create(child);
         admin.create(male);
         admin.create(FEMALE);
@@ -40,7 +42,6 @@ public class FamilyTestData {
     }
 
     public static Bean createFamily(String prefix, Bean child1, Bean child2, String childGender) {
-        AdminContext admin = AdminContext.get();
         int counter = 0;
         String lastName = "lastName";
 
