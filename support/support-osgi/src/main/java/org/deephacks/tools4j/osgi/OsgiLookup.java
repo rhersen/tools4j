@@ -39,6 +39,9 @@ public class OsgiLookup extends LookupProvider {
         for (Bundle bundle : LOADERS.keySet()) {
             Collection<OsgiServiceLoader> loaders = LOADERS.get(bundle);
             for (OsgiServiceLoader loader : loaders) {
+                if (!loader.getServiceName().equals(clazz.getName())) {
+                    continue;
+                }
                 ServiceReference ref = bundle.getBundleContext().getServiceReference(
                         loader.getServiceName());
                 // return first found service
@@ -55,6 +58,9 @@ public class OsgiLookup extends LookupProvider {
         for (Bundle bundle : LOADERS.keySet()) {
             Collection<OsgiServiceLoader> loaders = LOADERS.get(bundle);
             for (OsgiServiceLoader loader : loaders) {
+                if (!loader.getServiceName().equals(clazz.getName())) {
+                    continue;
+                }
                 ServiceReference ref = bundle.getBundleContext().getServiceReference(
                         loader.getServiceName());
                 services.add(bundle.getBundleContext().getService(ref));

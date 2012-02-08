@@ -25,6 +25,8 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.util.tracker.BundleTracker;
 import org.osgi.util.tracker.BundleTrackerCustomizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * LookupActivator is responsible for register SPI provider bundles as OSGi services and 
@@ -51,6 +53,7 @@ public class LookupActivator implements BundleActivator {
     }
 
     private static class LookupBundleTrackerCustomizer implements BundleTrackerCustomizer {
+        private Logger logger = LoggerFactory.getLogger(LookupActivator.class);
 
         @Override
         public void removedBundle(Bundle bundle, BundleEvent event, Object object) {
@@ -68,13 +71,17 @@ public class LookupActivator implements BundleActivator {
         @Override
         public Object addingBundle(Bundle bundle, BundleEvent event) {
             Set<OsgiServiceLoader> serviceLoaders = getServiceLoaders(bundle);
+
             if (serviceLoaders.isEmpty()) {
                 return null;
             }
             for (OsgiServiceLoader serviceLoader : serviceLoaders) {
                 serviceLoader.registerProviders();
-
+                logger.debug("Registered [" + serviceLoader.getServiceName()
+                        + "] providers {} for bundle {}.", serviceLoader.getProviders().toString(),
+                        bundle);
             }
+
             OSGI_LOOKUP.register(serviceLoaders);
             return bundle;
         }
