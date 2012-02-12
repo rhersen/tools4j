@@ -114,7 +114,7 @@ public class XmlBeanManager extends BeanManager {
 
     @Override
     public Map<BeanId, Bean> getBeanToValidate(Bean bean) throws AbortRuntimeException {
-        return new HashMap<BeanId, Bean>();
+        return readValuesAsMap();
     }
 
     @Override

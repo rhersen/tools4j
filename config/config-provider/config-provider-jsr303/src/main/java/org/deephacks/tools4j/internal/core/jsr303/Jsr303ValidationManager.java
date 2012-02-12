@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 
 @ServiceProvider(service = ValidationManager.class)
 public class Jsr303ValidationManager extends ValidationManager {
-    private Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+    private Validator validator;
     private Conversion conversion = Conversion.get();
     private Logger logger = LoggerFactory.getLogger(Jsr303ValidationManager.class);
 
@@ -54,6 +54,9 @@ public class Jsr303ValidationManager extends ValidationManager {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public void validate(Collection<Bean> beans) throws AbortRuntimeException {
+        if (validator == null) {
+            validator = Validation.buildDefaultValidatorFactory().getValidator();
+        }
         ClassRepository repos = new ClassRepository();
         ClassLoader cl = repos.getClassLoader();
         ClassLoader org = Thread.currentThread().getContextClassLoader();

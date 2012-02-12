@@ -15,6 +15,7 @@ package org.deephacks.tools4j.osgi;
 
 import static org.deephacks.tools4j.osgi.OsgiSupport.getServiceLoaders;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import org.deephacks.tools4j.osgi.OsgiSupport.OsgiServiceLoader;
@@ -37,6 +38,7 @@ import org.slf4j.LoggerFactory;
 public class LookupActivator implements BundleActivator {
     private static OsgiLookup OSGI_LOOKUP = new OsgiLookup();
     private BundleTracker bundleTracker;
+    private Logger logger = LoggerFactory.getLogger(LookupActivator.class);
 
     public void start(BundleContext context) throws Exception {
         Lookup.get().registerLookup(OSGI_LOOKUP);
@@ -70,7 +72,12 @@ public class LookupActivator implements BundleActivator {
 
         @Override
         public Object addingBundle(Bundle bundle, BundleEvent event) {
-            Set<OsgiServiceLoader> serviceLoaders = getServiceLoaders(bundle);
+            Set<OsgiServiceLoader> serviceLoaders = new HashSet<OsgiServiceLoader>();
+            try {
+                serviceLoaders = getServiceLoaders(bundle);
+            } catch (Exception e) {
+                logger.warn("Could not create Service Loader for bundle [" + bundle + "]", e);
+            }
 
             if (serviceLoaders.isEmpty()) {
                 return null;

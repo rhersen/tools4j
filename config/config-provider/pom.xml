@@ -15,6 +15,7 @@
     <module>config-provider-api</module>
     <module>config-provider-jpa20</module>
     <module>config-provider-jsr303</module>
+    <module>config-provider-jsr303-hibernate</module>
   </modules>
   <dependencies>
   </dependencies>
