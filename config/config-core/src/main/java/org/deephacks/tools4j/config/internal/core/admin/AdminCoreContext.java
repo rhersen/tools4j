@@ -50,17 +50,15 @@ public class AdminCoreContext extends AdminContext {
     private BeanManager beanManager;
     private SchemaManager schemaManager;
     private ValidationManager validationManager;
-    private Conversion conversion = Conversion.get();
+    private Conversion conversion;
 
     public AdminCoreContext() {
-        beanManager = lookupBeanManager();
-        schemaManager = lookupSchemaManager();
-        validationManager = Lookup.get().lookup(ValidationManager.class);
-        conversion.register(new BeanToObjectConverter());
+
     }
 
     @Override
     public List<Bean> list(String schemaName) {
+        doLookup();
         Map<BeanId, Bean> beans = beanManager.list(schemaName);
         setSchema(schemaManager.getSchemas(), beans);
         return new ArrayList<Bean>(beans.values());
@@ -68,6 +66,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public List<Bean> list(String schemaName, Collection<String> instanceIds) {
+        doLookup();
         Map<BeanId, Bean> beans = beanManager.list(schemaName);
         Map<BeanId, Bean> result = new HashMap<BeanId, Bean>();
         for (String instanceId : instanceIds) {
@@ -81,6 +80,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public Bean get(BeanId beanId) {
+        doLookup();
         Bean bean = beanManager.getEager(beanId);
         Map<String, Schema> schemas = schemaManager.getSchemas();
         setSchema(schemas, bean);
@@ -90,6 +90,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void create(Bean bean) {
+        doLookup();
         setSchema(schemaManager.getSchemas(), bean);
         validateSchema(bean);
         if (validationManager != null) {
@@ -101,6 +102,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void create(Collection<Bean> beans) {
+        doLookup();
         setSchema(schemaManager.getSchemas(), beans);
         validateSchema(beans);
         if (validationManager != null) {
@@ -112,6 +114,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void set(Bean bean) {
+        doLookup();
         setSchema(schemaManager.getSchemas(), bean);
         validateSchema(bean);
         if (validationManager != null) {
@@ -123,6 +126,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void set(Collection<Bean> beans) {
+        doLookup();
         setSchema(schemaManager.getSchemas(), beans);
         validateSchema(beans);
         if (validationManager != null) {
@@ -136,6 +140,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void merge(Bean bean) {
+        doLookup();
         setSchema(schemaManager.getSchemas(), bean);
         validateSchema(bean);
         if (validationManager != null) {
@@ -146,6 +151,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void merge(Collection<Bean> beans) {
+        doLookup();
         setSchema(schemaManager.getSchemas(), beans);
         validateSchema(beans);
         // ok to not have validation manager available
@@ -159,16 +165,19 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void delete(BeanId beanId) {
+        doLookup();
         beanManager.delete(beanId);
     }
 
     @Override
     public void delete(String name, Collection<String> instances) {
+        doLookup();
         beanManager.delete(name, instances);
     }
 
     @Override
     public Map<String, Schema> getSchemas() {
+        doLookup();
         Map<String, Schema> schemas = schemaManager.getSchemas();
         return schemas;
     }
@@ -399,4 +408,22 @@ public class AdminCoreContext extends AdminContext {
             }
         }
     }
+
+    private void doLookup() {
+        if (conversion == null) {
+            conversion = Conversion.get();
+            conversion.register(new BeanToObjectConverter());
+        }
+        if (beanManager == null) {
+            beanManager = lookupBeanManager();
+        }
+        if (schemaManager == null) {
+            schemaManager = lookupSchemaManager();
+        }
+        if (validationManager == null) {
+            validationManager = Lookup.get().lookup(ValidationManager.class);
+        }
+
+    }
+
 }

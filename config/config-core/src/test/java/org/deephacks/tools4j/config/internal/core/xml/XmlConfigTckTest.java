@@ -30,9 +30,9 @@ public class XmlConfigTckTest extends ConfigTckTests {
     @Override
     public void before() {
         XmlStorageHelper.clearAndInit(XmlConfigTckTest.class);
-        MockLookup.addMockInstances(RuntimeContext.class, new RuntimeCoreContext());
+        MockLookup.setMockInstances(RuntimeContext.class, new RuntimeCoreContext());
         MockLookup.addMockInstances(AdminContext.class, new AdminCoreContext());
-        MockLookup.setMockInstances(BeanManager.class, new XmlBeanManager());
+        MockLookup.addMockInstances(BeanManager.class, new XmlBeanManager());
         MockLookup.addMockInstances(SchemaManager.class, new XmlSchemaManager());
         MockLookup.addMockInstances(ValidationManager.class, new Jsr303ValidationManager());
     }

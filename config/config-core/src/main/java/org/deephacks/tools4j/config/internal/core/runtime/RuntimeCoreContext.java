@@ -45,22 +45,17 @@ import com.google.common.collect.Lists;
  */
 @ServiceProvider(service = RuntimeContext.class)
 public class RuntimeCoreContext extends RuntimeContext {
-    private Conversion conversion = Conversion.get();
+    private Conversion conversion;
     private SchemaManager schemaManager;
     private BeanManager beanManager;
     private ValidationManager validationManager;
 
     public RuntimeCoreContext() {
-        conversion.register(new ClassToSchemaConverter());
-        conversion.register(new FieldToSchemaPropertyConverter());
-        conversion.register(new BeanToObjectConverter());
-        schemaManager = lookupSchemaManager();
-        beanManager = lookupBeanManager();
-        validationManager = Lookup.get().lookup(ValidationManager.class);
     }
 
     @Override
     public void register(Class<?>... configurable) {
+        doLookup();
         for (Class<?> clazz : configurable) {
             Schema schema = conversion.convert(clazz, Schema.class);
             schemaManager.regsiterSchema(schema);
@@ -76,6 +71,7 @@ public class RuntimeCoreContext extends RuntimeContext {
 
     @Override
     public void unregister(Class<?>... configurable) {
+        doLookup();
         for (Class<?> clazz : configurable) {
             Schema schema = conversion.convert(clazz, Schema.class);
             schemaManager.removeSchema(schema.getName());
@@ -88,6 +84,7 @@ public class RuntimeCoreContext extends RuntimeContext {
 
     @Override
     public <T> T singleton(Class<T> configurable) {
+        doLookup();
         Schema schema = conversion.convert(configurable, Schema.class);
         BeanId singleton = getSingletonId(schema, configurable);
         Map<String, Schema> schemas = schemaManager.getSchemas();
@@ -99,6 +96,7 @@ public class RuntimeCoreContext extends RuntimeContext {
 
     @Override
     public <T> List<T> all(Class<T> clazz) {
+        doLookup();
         Schema s = schemaManager.getSchema(clazz.getAnnotation(Config.class).name());
         Map<String, Schema> schemas = schemaManager.getSchemas();
         Map<BeanId, Bean> beans = beanManager.list(s.getName());
@@ -111,6 +109,7 @@ public class RuntimeCoreContext extends RuntimeContext {
 
     @Override
     public <T> T get(String id, Class<T> clazz) {
+        doLookup();
         Schema s = schemaManager.getSchema(clazz.getAnnotation(Config.class).name());
         Map<String, Schema> schemas = schemaManager.getSchemas();
         BeanId beanId = BeanId.create(id, s.getName());
@@ -207,5 +206,25 @@ public class RuntimeCoreContext extends RuntimeContext {
             }
         }
         return new XmlSchemaManager();
+    }
+
+    private void doLookup() {
+        if (conversion == null) {
+            conversion = Conversion.get();
+            conversion.register(new ClassToSchemaConverter());
+            conversion.register(new FieldToSchemaPropertyConverter());
+            conversion.register(new BeanToObjectConverter());
+
+        }
+        if (beanManager == null) {
+            beanManager = lookupBeanManager();
+        }
+        if (schemaManager == null) {
+            schemaManager = lookupSchemaManager();
+        }
+        if (validationManager == null) {
+            validationManager = Lookup.get().lookup(ValidationManager.class);
+        }
+
     }
 }
