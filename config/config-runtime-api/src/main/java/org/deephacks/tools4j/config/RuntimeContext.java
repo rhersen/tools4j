@@ -17,33 +17,15 @@ import java.util.List;
 
 /**
  * <p> 
- * Central interface for providing typesafe configuration reliably to applications, 
- * that conforms to the constraints defined by the application. Configuration is read-only 
- * from an application perspective, but may be reloaded/changed from administrative 
- * context when the application is running.
+ * Central interface for providing configuration to applications. 
+ * <p>
+ * Applications use this interface for registering {@link Config} classes with this runtime context 
+ * in order to make them visible and available for provisioning in an administrative context. Configuration 
+ * instances should not be cached, unless applications have very specific caching needs.
  * </p>
  * <p>
- * Application should not cache configuration instance that are fetched from the runtime
- * context.
+ * This interfaces is looked up using {@link org.deephacks.tools4j.support.lookup.Lookup}.
  * </p>
- * <p>
- * TODO: Application can register event listeners that triggers when configuration changed. 
- * </p>
- * Application registered configured classes with this runtime context in order to make them
- * visible and available for provisioning in an administrative context.
- * <p> 
- * If the same class is registered multiple times, the former class is 
- * simply replaced. Keep this in mind when configuration schema is changed/upgraded. 
- * It is possible to register a schema that will make the administrative context to 
- * malfunction if the new class is not compatible with earlier versions of data of the 
- * same class.
- * <p>
- * Runtime Context is specifically not tied to either Java SE, EE, OSGi, Spring, CDI or 
- * any other runtime environment, programming model or framework, even though the goal 
- * is to integrate seamlessly with those. And so the runtime context is available for both 
- * server-side application programming, aswell as rich client applications.
- * </p>
- * 
  * @author Kristoffer Sjogren
  */
 public abstract class RuntimeContext {
@@ -58,26 +40,63 @@ public abstract class RuntimeContext {
     }
 
     /**
-     * If @Config changes name between upgrades, the new schema will be registered as 
-     * a new while the old one will persist. 
+     * Register a configurable class and make it visible and available for provisioning in 
+     * an administrative context.
      * 
-     * @param configurable
+     * <p>
+     * If the same class is registered multiple times, the former class is 
+     * simply replaced (upgraded). 
+     * <p>
+     * Be cautious of registering a new version of a class that is not compatible with 
+     * earlier versions of data of the same class.
+     * </p>
+     * 
+     * @param configurable {@link Config} classes.
      */
     public abstract void register(Class<?>... configurable);
 
+    /**
+     * Remove a configurable class. This will make the schema unavailable for provisioning 
+     * in an administrative context.
+     * <p>
+     * Data will never be removed when unregistering a configurable class.
+     * </p>
+     * 
+     * @param configurable {@link Config} classes.
+     */
     public abstract void unregister(Class<?>... configurable);
 
     /**
      * Read a singleton instance. This requires the configurable to have a 
      * <b>static</b> <b>final</b> {@link Id} with a default value assigned.  
      * 
-     * @param clazz A configurable class
-     * @return
+     * <p>
+     * Trying to read instances that are not singletons will result in an error.
+     * </p>
+     * 
+     * @param configurable {@link Config} class.
+     * @return The singleton instance of {@link Config} T class.
      */
     public abstract <T> T singleton(Class<T> configurable);
 
+    /**
+     * Fetch all instances of the same type. All references and properties
+     * will be traversed and fecthed eagerly.
+     *  
+     * @param configurable {@link Config} class.
+     * @return all instances of {@link Config} T class.
+     */
     public abstract <T> List<T> all(Class<T> configurable);
 
+    /**
+     * Get a specific instance with respect to its {@link Id}. All references 
+     * and properties will be traversed and fecthed eagerly.
+     *  
+     * @param id of the instance as specfied by {@link Id}.
+     * 
+     * @param configurable {@link Config} class.
+     * @return an instance of {@link Config} T class.
+     */
     public abstract <T> T get(String id, Class<T> configurable);
 
 }

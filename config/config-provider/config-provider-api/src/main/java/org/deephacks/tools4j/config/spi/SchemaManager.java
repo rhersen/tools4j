@@ -19,7 +19,7 @@ import java.util.Map;
 import org.deephacks.tools4j.config.model.Schema;
 
 /**
- * SchemaManager is responsible for management of schemas.
+ * SchemaManager is responsible for management and storage of schemas.
  * 
  * @author Kristoffer Sjogren
  */
@@ -29,15 +29,15 @@ public abstract class SchemaManager implements Serializable {
     /**
      * List name of all schemas managed by the manager.
      * 
-     * @return list of names.
+     * @return Map of Schemas indexed by name.
      */
     public abstract Map<String, Schema> getSchemas();
 
     /**
      * Return information that describing the schema for a particular type.
      * 
-     * @param String
-     * @return schema
+     * @param schemaName of schema.
+     * @return Schema identified by name.
      */
     public abstract Schema getSchema(String schemaName);
 
@@ -51,9 +51,7 @@ public abstract class SchemaManager implements Serializable {
      * manager implementations through specific properties.
      * </p>
      * 
-     * @param name Name of the model.
-     * @param info A bean info hierarchy representing its model, and
-     *            also model specific properties.
+     * @param schema list of schemas to register.
      */
     public abstract void regsiterSchema(Schema... schema);
 
@@ -65,7 +63,7 @@ public abstract class SchemaManager implements Serializable {
      * associated with the schema that is to be removed.
      * </p>
      * 
-     * @param name Class that represent the schema.
+     * @param schemaName identifiying the schema.
      */
     public abstract void removeSchema(String schemaName);
 

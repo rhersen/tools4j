@@ -24,23 +24,21 @@ import org.deephacks.tools4j.support.event.AbortRuntimeException;
 
 /**
  * <p> 
- * Central interface for provisioning configuration beans to applications. 
- * Configuration is read-only from an application perspective, but can be changed 
- * from this interface making the application reload configuration while it is running.
+ * Central interface for provisioning configuration to applications. 
+ * <p>
+ * Configuration is read-only from an application runtime perspective and can only be 
+ * changed using this interface. Configuration changes will be reloaded automatically by 
+ * applications at runtime.
  * </p>
  * <p>
- * Beans that are fetched will always have their schema initialized, including their 
- * properties and references traversed and fetched eagerly. However, beans that are 
- * provided/given to the admin context does not need to have to have their schema 
- * initalized for operations to work, nor must references be set recusivley (BeanId is 
- * enough to indicate a reference).
- * </p>
- * 
+ * Read operations will return {@link Bean} that will always have schema initialized, including 
+ * properties and references traversed and fetched eagerly. 
  * <p>
- * Admin Context is specifically not tied to either Java SE, EE, OSGi, Spring, CDI or 
- * any other runtime environment, programming model or framework, even though the goal 
- * is to integrate seamlessly with those. And so the admin context is available for both 
- * server-side application programming, aswell as rich client applications.
+ * Provisioning operations are relieved from having {@link Bean} schema initalized, nor 
+ * must references be set recusivley, {@link BeanId} is enough to indicate references.
+ * </p>
+ * <p>
+ * This interfaces is looked up using {@link org.deephacks.tools4j.support.lookup.Lookup}.
  * </p>
  * 
  * @author Kristoffer Sjogren
@@ -59,7 +57,7 @@ public abstract class AdminContext {
     /**
      * Get a single bean as identified by the id. 
      *
-     * @param beanId
+     * @param beanId id of the bean to be fetched.
      * @throws AbortRuntimeException is thrown when the system itself cannot 
      * recover from a certain event and must therefore abort execution, see 
      * {@link org.deephacks.tools4j.config.model.Events}.
@@ -67,10 +65,10 @@ public abstract class AdminContext {
     public abstract Bean get(BeanId beanId) throws AbortRuntimeException;
 
     /**
-     * List bean instances of particular type. 
+     * List all bean instances of particular schema. 
      * 
-     * @param type the type of beans to be listed.
-     * @return bean of matching type.
+     * @param schemaName of beans to be listed.
+     * @return beans matching the schema.
      * @throws AbortRuntimeException is thrown when the system itself cannot 
      * recover from a certain event and must therefore abort execution, see 
      * {@link org.deephacks.tools4j.config.model.Events}.
@@ -78,9 +76,9 @@ public abstract class AdminContext {
     public abstract List<Bean> list(String schemaName) throws AbortRuntimeException;
 
     /**
-     * List a sepecific set of bean instances of same specific type. 
+     * List a sepecific set of bean instances of particular schema. 
      * 
-     * @param schemaName the schema name of beans to be listed.
+     * @param schemaName of beans to be listed.
      * @param instanceIds the ids that should be listed.
      * @return bean of matching type.
      * @throws AbortRuntimeException is thrown when the system itself cannot 
@@ -91,33 +89,34 @@ public abstract class AdminContext {
             throws AbortRuntimeException;
 
     /**
+     * Create a bean. 
      * 
-     * @param adminBean
+     * @param bean to be created.
      * @throws AbortRuntimeException is thrown when the system itself cannot 
      * recover from a certain event and must therefore abort execution, see 
      * {@link org.deephacks.tools4j.config.model.Events}.
      */
-    public abstract void create(Bean adminBean) throws AbortRuntimeException;
+    public abstract void create(Bean bean) throws AbortRuntimeException;
 
     /**
+     * Collection variant of {@link AdminContext#create(Bean)}.  
      * 
-     * @param adminBeans
+     * @param beans to be created.
      * @throws AbortRuntimeException is thrown when the system itself cannot 
      * recover from a certain event and must therefore abort execution, see 
      * {@link org.deephacks.tools4j.config.model.Events}.
      */
-    public abstract void create(Collection<Bean> adminBeans) throws AbortRuntimeException;
+    public abstract void create(Collection<Bean> beans) throws AbortRuntimeException;
 
     /**
-     * Creates or overwrites (set) existing bean instances with provided data.
-     * The bean data is considered flat. References will not be traversed 
-     * recursively.   
+     * Overwrite/set existing bean instances with provided data.
+     *
      * <p>
      * Already persisted properties associated with the instance 
      * will be removed if they are missing from the provided bean instances.
      * </p>
      * 
-     * @param bean A bean with the values to be written.
+     * @param bean with values to be written.
      * @throws AbortRuntimeException is thrown when the system itself cannot 
      * recover from a certain event and must therefore abort execution, see 
      * {@link org.deephacks.tools4j.config.model.Events}.
@@ -125,11 +124,8 @@ public abstract class AdminContext {
     public abstract void set(Bean bean) throws AbortRuntimeException;
 
     /**
-     * If multiple beans should be written. 
-     * <p>
-     * Beans should each be provided as a separate element in the list as 
-     * initialized bean references not will be traversed and set recursively/eagerly. 
-     * </p>
+     * Collection variant of {@link AdminContext#set(Bean)}.  
+     * 
      * @throws AbortRuntimeException is thrown when the system itself cannot 
      * recover from a certain event and must therefore abort execution, see 
      * {@link org.deephacks.tools4j.config.model.Events}.
@@ -138,19 +134,13 @@ public abstract class AdminContext {
 
     /**
      * <p>
-     * Merges the provided properties with an already existing instance. 
-     * Already persisted properties associated with the instance will be
-     * overwritten if they also exist on the provided bean. A property
-     * that exist with a null value will be deleted.
+     * Merges the provided bean properties with an already existing instance.
      * <p>
-     * Values not provided will remain untouched in storage, hence  this method can 
+     * Properties not provided will remain untouched in storage, hence this method can 
      * be used to set or delete a single property. 
      * </p>
-     * <p>
-     * Initialized bean references not will be traversed and merged recursively/eagerly. 
-     * </p>
      * 
-     * @param bean The bean to be merged.
+     * @param bean to be merged.
      * @throws AbortRuntimeException is thrown when the system itself cannot 
      * recover from a certain event and must therefore abort execution, see 
      * {@link org.deephacks.tools4j.config.model.Events}.
@@ -158,12 +148,7 @@ public abstract class AdminContext {
     public abstract void merge(Bean bean) throws AbortRuntimeException;
 
     /**
-     * This is the collection variant of {@link #merge(Bean)}.  
-     * 
-     * <p>
-     * Beans should each be provided as a separate element in the list as 
-     * initialized bean references not will be traversed recursively/eagerly. 
-     * </p>
+     * Collection variant of {@link AdminContext#merge(Bean)}.  
      *  
      * @throws AbortRuntimeException is thrown when the system itself cannot 
      * recover from a certain event and must therefore abort execution, see 
@@ -174,8 +159,8 @@ public abstract class AdminContext {
     /**
      * Delete a bean. 
      * <p>
-     * A bean that are referenced by other beans cannot be removed as it would
-     * violate referential integrity.
+     * Beans are only allowed to be deleted if they are not referenced by other beans, 
+     * in order to enforce referential integrity.
      * </p>      
      * <p>
      * Delete operations are not cascading, which means that a bean's references 
@@ -190,7 +175,7 @@ public abstract class AdminContext {
     public abstract void delete(BeanId bean) throws AbortRuntimeException;
 
     /**
-     * This is the collection variant of {@link #delete(Bean)}.
+     * This is the collection variant of {@link AdminContext#delete(Bean)}.
      * 
      * @param schemaName the name of the schema that covers all instance ids.
      * @param instanceIds instance ids to be deleted.
@@ -202,14 +187,15 @@ public abstract class AdminContext {
             throws AbortRuntimeException;
 
     /**
-      * Get all schemas available in the system. The keys of the map is the name
-      * of the schema. 
-      * 
-      *@return a map of schemas indexed on schema name.
+     * Get all schemas available in the system. The keys of the map is the name
+     * of the schema. This method can be useful for dynamic schema discovery and
+     * display.
+     * 
+     * @return a map of schemas indexed on schema name.
      * @throws AbortRuntimeException is thrown when the system itself cannot 
      * recover from a certain event and must therefore abort execution, see 
      * {@link org.deephacks.tools4j.config.model.Events}.
-      */
+     */
     public abstract Map<String, Schema> getSchemas();
 
 }

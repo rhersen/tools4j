@@ -148,7 +148,7 @@
         <configuration>
           <javadoc:aggregate>true</javadoc:aggregate>
           <stylesheetfile>stylesheet.css</stylesheetfile>
-          <excludePackageNames>*.internal:*.test</excludePackageNames>
+          <excludePackageNames>*.internal:*.test:*.examples</excludePackageNames>
         </configuration>
       </plugin>
       <plugin>

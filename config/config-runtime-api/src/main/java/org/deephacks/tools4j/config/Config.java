@@ -21,24 +21,21 @@ import java.lang.annotation.Target;
 
 /**
  * <p>
- * A specification of a particular configuration type that express the  
- * structure, constraints and conditions under which instances can exist to 
- * fulfill their intended purpose.
- * </p>
+ * This annotation is used to mark a classes and fields as configurable and serves as a specification 
+ * of to express the structure, constraints and conditions under which instances can exist to 
+ * fulfill their intended purpose. Instances of configurable classes must always be unique 
+ * with respect to {@link Id}.
+ * </p> 
  * <p>
- * This annotation is used to mark a classes and fields as configurable. Instances 
- * of configurable classes must always be unique with respect to {@link Id}.
- * </p>
- * <p>
- * Changing configuration should never cause system failure or malfunctioning. Make sure 
- * properties have proper validation rules so that administrators cannot accidentally 
- * misconfigure the system.
+ * Changing configuration should never cause system failure or malfunctioning. Configurables should 
+ * therefore make sure that their properties have proper validation rules so that administrators 
+ * does not accidentally misconfigure the system.
  * </p>
  * <p>
  * <ul>
  * <li>Fields can be single-valued or multi-valued using any subclass of {@link java.util.Collection} type.</li>
  * <li>Fields can be any subclass of {@link java.util.Map} type, but this is only allowed for 
- * referencing other {@link Config} where key is parameterized as {@link java.lang.String}.</li>
+ * referencing other {@link Config}, where key is the {@link Id} parameterized as {@link java.lang.String}.</li>
  * <li>Fields can be <b>final</b> in which case it is considered immutable.</li>
  * <li>Fields are not allowed to be <b>transient</b>.</li>
  * <li>Fields are not allowed to be non-<b>final</b> <b>static</b>.</li>

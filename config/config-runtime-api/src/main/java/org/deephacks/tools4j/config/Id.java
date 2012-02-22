@@ -20,17 +20,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Id uniquely identify a configuration instance similar to how primary key are used within
- * databases.
- * <p>
- * Ids are used by administrators to link configurations together. It may therefore
- * be beneficial to choose an id that assist intuition for making these realtionships.  
- * But be careful choosing meaning for ids, they define uniqueness and are not allowed change after 
- * they have been created.
- * </p>
+ * Id identify a configuration instance similar to how primary key are used in a database and are unique 
+ * with respect to instance and schema.  
+ * 
  * <p>
  * Every configurable class must annotate one (and only one) field with this annotation so 
  * that specific instances can be addressed.  
+ * </p>
+ * <p>
+ * Instance ids are assigned to instances by an administrator and may not change after they have been created. 
+ * Instance ids are also used by administrators for indicating relationships between instances. Applications use 
+ * instance ids to read instances at runtime.  
  * </p>
  * <p>
  * Configurable classes can be singletons. This means only one instance with an id that cannot change and  
@@ -64,7 +64,7 @@ public @interface Id {
 
     /**
      * Description can be used to inform if identification is intended to use attributes 
-     * that exist in the real world ) or relate to already eastablished system architecture 
+     * that exist in the real world or relate to already eastablished system architecture 
      * aspects/concepts.
      * 
      * @return

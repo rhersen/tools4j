@@ -65,7 +65,7 @@ public class Jsr303ValidationManager extends ValidationManager {
             for (Bean bean : beans) {
                 Class genclazz = forName(bean.getSchema().getType());
                 Object beanToValidate = conversion.convert(bean, genclazz);
-                logger.info("Validating {}", beanToValidate);
+                logger.debug("Validating {}", beanToValidate);
                 Set<ConstraintViolation<Object>> violations = validator.validate(beanToValidate);
                 String msg = "";
                 for (ConstraintViolation<Object> v : violations) {

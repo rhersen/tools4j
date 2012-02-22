@@ -72,7 +72,7 @@ public abstract class BeanManager implements Serializable {
     public abstract void create(Bean bean) throws AbortRuntimeException;
 
     /**
-     * This is the collection variant of {@link #create(Bean)}.
+     * This is the collection variant of {@link BeanManager#create(Bean)}.
      * 
      * @see create(Bean)
      * @param bean
@@ -114,7 +114,7 @@ public abstract class BeanManager implements Serializable {
     public abstract void set(Bean bean);
 
     /**
-     * This is the collection variant of {@link #set(Bean)}.
+     * This is the collection variant of {@link BeanManager#set(Bean)}.
      * 
      * @see set(Bean)
      * @param bean
@@ -150,7 +150,7 @@ public abstract class BeanManager implements Serializable {
     public abstract void merge(Bean bean) throws AbortRuntimeException;
 
     /**
-     * This is the collection variant of {@link #merge(Bean)}. 
+     * This is the collection variant of {@link BeanManager#merge(Bean)}. 
      * 
      * @see merge(Bean)
      * @param bean

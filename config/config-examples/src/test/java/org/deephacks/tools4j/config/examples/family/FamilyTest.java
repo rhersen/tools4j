@@ -22,7 +22,9 @@ import javax.persistence.EntityManagerFactory;
 
 import org.deephacks.tools4j.config.RuntimeContext;
 import org.deephacks.tools4j.config.admin.AdminContext;
+import org.deephacks.tools4j.config.internal.core.admin.AdminCoreContext;
 import org.deephacks.tools4j.config.internal.core.jpa.Jpa20BeanManager;
+import org.deephacks.tools4j.config.internal.core.runtime.RuntimeCoreContext;
 import org.deephacks.tools4j.config.internal.core.xml.XmlSchemaManager;
 import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.spi.BeanManager;
@@ -41,7 +43,7 @@ import org.deephacks.tools4j.support.web.jpa.ThreadLocalEntityManager;
  */
 public class FamilyTest {
     // intentially removed from test suite. Uncomment for demo purposes in eclipse.
-    // @Test
+    //    @Test
     public void passing_test() {
         File scriptDir = JUnitUtils.getMavenProjectChildFile(Jpa20BeanManager.class,
                 "src/main/resources/META-INF/");
@@ -50,6 +52,8 @@ public class FamilyTest {
         MockLookup.addMockInstances(ValidationManager.class, new Jsr303ValidationManager());
         MockLookup.addMockInstances(SchemaManager.class, new XmlSchemaManager());
         MockLookup.addMockInstances(BeanManager.class, new Jpa20BeanManager());
+        MockLookup.addMockInstances(AdminContext.class, new AdminCoreContext());
+        MockLookup.addMockInstances(RuntimeContext.class, new RuntimeCoreContext());
         AdminContext admin = Lookup.get().lookup(AdminContext.class);
         RuntimeContext runtime = Lookup.get().lookup(RuntimeContext.class);
         EntityManagerFactory factory = EntityManagerFactoryCreator

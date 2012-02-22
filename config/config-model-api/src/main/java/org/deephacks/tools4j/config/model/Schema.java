@@ -28,7 +28,7 @@ import com.google.common.collect.Multimap;
 
 /**
  * <p>
- * Schema is also used to provide information to administrative users in order to explain 
+ * Schema is used to provide information to administrative users in order to explain 
  * its purpose and how configuration changes may affect system behaviour.
  * </p>
  * <p>

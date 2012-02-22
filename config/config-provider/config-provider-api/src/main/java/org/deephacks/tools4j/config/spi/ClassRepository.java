@@ -37,6 +37,10 @@ import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.exporter.ZipExporter;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 
+/**
+ * Experimental class for exposing configurable classes to an admin context that is remote/external 
+ * to the JVM or ClassLoader running the application.
+ */
 public class ClassRepository {
     private static final String GENERATED_CLASSES = "tools4j_validation_tmp";
     private static final String GENERATED_CLASSES_PREFIX = "runtime_class_registration";
@@ -169,7 +173,7 @@ public class ClassRepository {
         return urls;
     }
 
-    public static class Archiver {
+    private static class Archiver {
 
         public static void write(File dir, File jar, Class<?>... clazzes) {
             JavaArchive jarArchieve;

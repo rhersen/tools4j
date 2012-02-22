@@ -15,6 +15,7 @@ package org.deephacks.tools4j.config.internal.core.runtime;
 
 import static org.deephacks.tools4j.support.reflections.Reflections.findFields;
 import static org.deephacks.tools4j.support.reflections.Reflections.forName;
+import static org.deephacks.tools4j.support.reflections.Reflections.newInstance;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -28,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.deephacks.tools4j.config.Config;
 import org.deephacks.tools4j.config.Id;
 import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
@@ -40,14 +40,18 @@ import org.deephacks.tools4j.config.model.Schema.SchemaPropertyRefList;
 import org.deephacks.tools4j.config.model.Schema.SchemaPropertyRefMap;
 import org.deephacks.tools4j.support.conversion.Conversion;
 import org.deephacks.tools4j.support.conversion.Converter;
-import org.deephacks.tools4j.support.reflections.BeanInstance;
 
 public class BeanToObjectConverter implements Converter<Bean, Object> {
     private Conversion conversion = Conversion.get();
 
     @Override
     public Object convert(Bean source, Class<? extends Object> specificType) {
-        BeanInstance<?> instance = BeanInstance.create(specificType);
+        Object instance = null;
+        try {
+            instance = newInstance(specificType);
+        } catch (Exception e) {
+            throw new UnsupportedOperationException(e);
+        }
         Schema schema = source.getSchema();
         Map<String, Object> values = new HashMap<String, Object>();
         convertProperty(source, schema, values);
@@ -59,10 +63,27 @@ public class BeanToObjectConverter implements Converter<Bean, Object> {
             // do not try to inject singleton id: the field is static final
             values.put(getIdField(specificType), source.getId().getInstanceId());
         }
-        instance.injectFieldsAnnotatedWith(Config.class).withValues(values);
-        instance.injectFieldsAnnotatedWith(Id.class).withValues(values);
-        return instance.get();
+        inject(instance, values);
+        return instance;
 
+    }
+
+    public void inject(Object instance, Map<String, Object> values) {
+        List<Field> fields = findFields(instance.getClass());
+        for (Field field : fields) {
+            field.setAccessible(true);
+            Object value = values.get(field.getName());
+            if (value == null) {
+                continue;
+            }
+            try {
+                field.set(instance, value);
+            } catch (IllegalArgumentException e) {
+                throw new UnsupportedOperationException(e);
+            } catch (IllegalAccessException e) {
+                throw new UnsupportedOperationException(e);
+            }
+        }
     }
 
     private void convertPropertyRefMap(Bean source, Schema schema, Map<String, Object> values) {
