@@ -37,13 +37,14 @@ import org.deephacks.tools4j.support.test.Database;
 import org.deephacks.tools4j.support.test.JUnitUtils;
 import org.deephacks.tools4j.support.web.jpa.EntityManagerFactoryCreator;
 import org.deephacks.tools4j.support.web.jpa.ThreadLocalEntityManager;
+import org.junit.Test;
 
 /**
  * FamilyTest is dependent on mysql to work correctly.
  */
 public class FamilyTest {
     // intentially removed from test suite. Uncomment for demo purposes in eclipse.
-    //    @Test
+    @Test
     public void passing_test() {
         File scriptDir = JUnitUtils.getMavenProjectChildFile(Jpa20BeanManager.class,
                 "src/main/resources/META-INF/");

@@ -63,6 +63,24 @@ public class Reflections {
         }
     }
 
+    public static List<Class<?>> computeEnclosingClasses(Class<?> clazz) {
+        List<Class<?>> classes = new ArrayList<Class<?>>();
+        computeEnclosingClasses(clazz, classes);
+        return classes;
+    }
+
+    private static void computeEnclosingClasses(Class<?> clazz, List<Class<?>> classes) {
+        for (Class<?> current = clazz; current != null; current = current.getEnclosingClass()) {
+            if (classes.contains(current)) {
+                return;
+            }
+            classes.add(current);
+            for (Class<?> currentInterface : current.getInterfaces()) {
+                computeEnclosingClasses(currentInterface, classes);
+            }
+        }
+    }
+
     public static <T> T newInstance(Class<T> type) throws InstantiationException,
             IllegalAccessException, InvocationTargetException, NoSuchMethodException {
         Class<?> enclosing = type.getEnclosingClass();

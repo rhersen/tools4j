@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.deephacks.tools4j.support.SystemProperties;
+import org.deephacks.tools4j.support.reflections.Reflections;
 import org.jboss.shrinkwrap.api.ArchivePath;
 import org.jboss.shrinkwrap.api.Node;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -58,10 +59,20 @@ public class ClassRepository {
     }
 
     public void add(Class<?> clazz) {
-        if (shouldAdd(clazz)) {
-            dependencies.add(clazz);
+        List<Class<?>> classes = Reflections.computeClassHierarchy(clazz);
+
+        for (Class<?> aClass : classes) {
+            List<Class<?>> enclosings = Reflections.computeEnclosingClasses(clazz);
+            for (Class<?> enclosing : enclosings) {
+                if (shouldAdd(enclosing)) {
+                    dependencies.add(enclosing);
+                }
+            }
+            if (shouldAdd(aClass)) {
+                dependencies.add(aClass);
+            }
+            dependencies.addAll(getTransitiveDependencies(aClass));
         }
-        dependencies.addAll(getTransitiveDependencies(clazz));
     }
 
     public void add(Collection<Class<?>> clazzes) {
@@ -108,7 +119,6 @@ public class ClassRepository {
 
     private Set<Class<?>> getTransitiveDependencies(Class<?> clazz) {
         Set<Class<?>> transitive = new HashSet<Class<?>>();
-
         transitive.addAll(getSuperClasses(clazz));
         for (Field f : findFields(clazz)) {
             transitive.addAll(getEnumDependencies(f));
@@ -118,9 +128,10 @@ public class ClassRepository {
 
     private Set<Class<?>> getEnumDependencies(Field f) {
         Set<Class<?>> transitive = new HashSet<Class<?>>();
-
         if (f.getType().isEnum()) {
-            transitive.add(f.getType());
+            if (shouldAdd(f.getType())) {
+                transitive.add(f.getType());
+            }
         }
         return transitive;
     }
