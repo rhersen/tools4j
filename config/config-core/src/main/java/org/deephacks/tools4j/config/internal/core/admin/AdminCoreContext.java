@@ -199,54 +199,62 @@ public class AdminCoreContext extends AdminContext {
         }
     }
 
-    private void validateMerge(Bean bean) {
-        Map<BeanId, Bean> beansToValidate = beanManager.getBeanToValidate(bean);
+    private void validateMerge(Bean mergebean) {
+        Map<BeanId, Bean> beansToValidate = beanManager.getBeanToValidate(mergebean);
         setSchema(schemaManager.getSchemas(), beansToValidate);
-        // all references of the instance must be 
-        // merged before validation is executed.
-        List<Bean> mergeBeanReferences = findReferences(bean.getId(), beansToValidate.values());
+        // since we are validating mergebean predecessors, we need to make sure
+        // that they see a merged reference (not unmerged reference currently in storage)
+        // before validation can proceed.
+        List<Bean> mergeBeanReferences = findReferences(mergebean.getId(), beansToValidate.values());
         // merge all references
-        merge(mergeBeanReferences, bean);
+        merge(mergeBeanReferences, mergebean);
         // ready to validate
         validationManager.validate(beansToValidate.values());
     }
 
-    private void validateSet(Bean bean) {
-        Map<BeanId, Bean> beansToValidate = beanManager.getBeanToValidate(bean);
+    private void validateSet(Bean setbean) {
+        Map<BeanId, Bean> beansToValidate = beanManager.getBeanToValidate(setbean);
         setSchema(schemaManager.getSchemas(), beansToValidate);
-        // all references of the instance must be 
-        // set before validation is executed.
-        List<Bean> setBeanReferences = findReferences(bean.getId(), beansToValidate.values());
+        // since we are validating setbean predecessors, we need to make sure
+        // that they see a replaced/set reference (not old reference currently in storage)
+        // before validation can proceed.
+        List<Bean> setBeanReferences = findReferences(setbean.getId(), beansToValidate.values());
         for (Bean ref : setBeanReferences) {
             // clearing and then merging have same 
             // effect as a 'set' operation
             ref.clear();
         }
-        merge(setBeanReferences, bean);
+        merge(setBeanReferences, setbean);
         validationManager.validate(beansToValidate.values());
     }
 
     /**
-     * Does a recursive search for all beans that reference a particular bean. 
+     * Does a recursive check if predecessor have a particular reference and if
+     * so return those predecessor references.
      */
-    private List<Bean> findReferences(BeanId id, Collection<Bean> searches) {
+    private List<Bean> findReferences(BeanId reference, Collection<Bean> predecessors) {
         ArrayList<Bean> matches = new ArrayList<Bean>();
-        for (Bean search : searches) {
-            matches.addAll(findReferences(id, search));
+        for (Bean predecessor : predecessors) {
+            matches.addAll(findReferences(reference, predecessor));
         }
         return matches;
     }
 
-    private List<Bean> findReferences(BeanId id, Bean search) {
+    private List<Bean> findReferences(BeanId reference, Bean predecessor) {
         ArrayList<Bean> matches = new ArrayList<Bean>();
-        if (id.equals(search.getId())) {
-            matches.add(search);
+        if (reference.equals(predecessor.getId())) {
+            matches.add(predecessor);
         }
-        for (BeanId ref : search.getReferences()) {
-            if (ref.equals(id)) {
+        for (BeanId ref : predecessor.getReferences()) {
+            if (ref.equals(reference)) {
                 matches.add(ref.getBean());
             }
-            matches.addAll(findReferences(id, ref.getBean()));
+            Bean bean = ref.getBean();
+            if (bean == null) {
+                // look no deeper 
+                continue;
+            }
+            matches.addAll(findReferences(reference, bean));
         }
         return matches;
     }
@@ -307,7 +315,7 @@ public class AdminCoreContext extends AdminContext {
      * prioritized and the storage is secondary for looking up references.  
      */
     private void initalizeReferences(Collection<Bean> beans) {
-        Map<BeanId, Bean> map = BeanUtils.uniqueIndex(beans);
+        Map<BeanId, Bean> userProvided = BeanUtils.uniqueIndex(beans);
         for (Bean bean : beans) {
             for (String name : bean.getReferenceNames()) {
                 List<BeanId> values = bean.getReference(name);
@@ -317,7 +325,7 @@ public class AdminCoreContext extends AdminContext {
                 for (BeanId beanId : values) {
                     // the does not exist in storage, but may exist in the
                     // set of beans provided by the user.
-                    Bean ref = map.get(beanId);
+                    Bean ref = userProvided.get(beanId);
                     if (ref == null) {
                         ref = beanManager.getEager(beanId);
                     }

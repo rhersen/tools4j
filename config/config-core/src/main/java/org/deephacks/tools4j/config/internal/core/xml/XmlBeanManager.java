@@ -52,8 +52,11 @@ import org.deephacks.tools4j.support.event.AbortRuntimeException;
 import com.google.common.io.Files;
 
 /**
- * ConfigBeanManagerDefault is responsible for storing config bean instances in 
- * XML format.
+ * Bean manager storing config bean instances in XML format.
+ * 
+ * This class should be considered a test facility. It have not been optimized for performance
+ * or robustness. 
+ * 
  */
 @ServiceProvider(service = BeanManager.class)
 public class XmlBeanManager extends BeanManager {
@@ -98,29 +101,83 @@ public class XmlBeanManager extends BeanManager {
 
     @Override
     public Bean getLazy(BeanId id) throws AbortRuntimeException {
-        List<Bean> all = readValues();
-        Bean result = null;
-        for (Bean b : all) {
-            if (b.getId().equals(id)) {
-                result = b;
-                break;
-            }
-        }
-        if (result == null) {
+        Map<BeanId, Bean> all = readValuesAsMap();
+        Bean bean = all.get(id);
+        if (bean == null) {
             throw CFG304_BEAN_DOESNT_EXIST(id);
         }
-        return result;
+        for (BeanId ref : bean.getReferences()) {
+            Bean refBean = all.get(ref);
+            if (bean == null) {
+                throw CFG301_MISSING_RUNTIME_REF(ref);
+            }
+            ref.setBean(refBean);
+        }
+        return bean;
     }
 
+    /**
+     * The direct, but no further, successors that references this bean will also be 
+     * fetched and initalized with their direct, but no further, predecessors.
+     */
     @Override
     public Map<BeanId, Bean> getBeanToValidate(Bean bean) throws AbortRuntimeException {
-        List<Bean> all = readValues();
-        Map<BeanId, Bean> beans = new HashMap<BeanId, Bean>();
-        for (Bean b : all) {
-            Bean eager = getEagerly(b.getId(), all);
-            beans.put(eager.getId(), eager);
+        Map<BeanId, Bean> predecessors = new HashMap<BeanId, Bean>();
+        // beans read from xml storage will only have their basic properties initalized...  
+        Map<BeanId, Bean> all = readValuesAsMap();
+        // ... but we also need set the direct references/predecessors for beans to validate
+        Map<BeanId, Bean> beansToValidate = getDirectSuccessors(bean, all);
+        beansToValidate.put(bean.getId(), bean);
+        for (Bean toValidate : beansToValidate.values()) {
+            predecessors.putAll(getDirectPredecessors(toValidate, all));
         }
-        return beans;
+
+        for (Bean predecessor : predecessors.values()) {
+            for (BeanId ref : predecessor.getReferences()) {
+                Bean b = all.get(ref);
+                if (b == null) {
+                    throw CFG301_MISSING_RUNTIME_REF(predecessor.getId());
+                }
+                ref.setBean(b);
+            }
+        }
+        for (Bean toValidate : beansToValidate.values()) {
+            // all references of beansToValidate should now 
+            // be available in predecessors.
+            for (BeanId ref : toValidate.getReferences()) {
+                Bean predecessor = predecessors.get(ref);
+                if (predecessor == null) {
+                    throw new IllegalStateException("Bug in algorithm. Reference [" + ref
+                            + "] of [" + toValidate.getId()
+                            + "] should be available in predecessors.");
+                }
+                ref.setBean(predecessor);
+            }
+        }
+        return beansToValidate;
+    }
+
+    private Map<BeanId, Bean> getDirectPredecessors(Bean bean, Map<BeanId, Bean> all) {
+        Map<BeanId, Bean> predecessors = new HashMap<BeanId, Bean>();
+        for (BeanId ref : bean.getReferences()) {
+            Bean predecessor = all.get(ref);
+            if (predecessor == null) {
+                throw CFG304_BEAN_DOESNT_EXIST(ref);
+            }
+            predecessors.put(predecessor.getId(), predecessor);
+        }
+        return predecessors;
+    }
+
+    private Map<BeanId, Bean> getDirectSuccessors(Bean bean, Map<BeanId, Bean> all) {
+        Map<BeanId, Bean> successors = new HashMap<BeanId, Bean>();
+        for (Bean b : all.values()) {
+            List<BeanId> refs = b.getReferences();
+            if (refs.contains(bean.getId())) {
+                successors.put(b.getId(), b);
+            }
+        }
+        return successors;
     }
 
     @Override

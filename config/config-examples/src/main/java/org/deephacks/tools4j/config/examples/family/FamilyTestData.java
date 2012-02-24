@@ -24,18 +24,18 @@ public class FamilyTestData {
     public static Bean createFamily(String prefix, String childGender) {
         int counter = 0;
         String lastName = "lastName";
-        Bean male = getMale(id(prefix, counter++), "lastName");
-        Bean FEMALE = getFemale(id(prefix, counter++), lastName);
+        Bean male = getMale(id(prefix, counter++), lastName);
+        Bean female = getFemale(id(prefix, counter++), lastName);
         Bean child = getMale(id(prefix, counter++), lastName);
         child.setProperty("gender", childGender);
-        Bean marriage = getMarriage(male.getId().getInstanceId(), FEMALE.getId().getInstanceId());
+        Bean marriage = getMarriage(male.getId().getInstanceId(), female.getId().getInstanceId());
         male.addReference("children", child.getId());
-        FEMALE.addReference("children", child.getId());
+        female.addReference("children", child.getId());
         marriage.addReference("children", child.getId());
 
         admin.create(child);
         admin.create(male);
-        admin.create(FEMALE);
+        admin.create(female);
         admin.create(marriage);
 
         return child;

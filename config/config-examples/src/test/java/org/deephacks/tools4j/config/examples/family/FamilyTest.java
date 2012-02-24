@@ -25,8 +25,10 @@ import org.deephacks.tools4j.config.admin.AdminContext;
 import org.deephacks.tools4j.config.internal.core.admin.AdminCoreContext;
 import org.deephacks.tools4j.config.internal.core.jpa.Jpa20BeanManager;
 import org.deephacks.tools4j.config.internal.core.runtime.RuntimeCoreContext;
+import org.deephacks.tools4j.config.internal.core.xml.XmlBeanManager;
 import org.deephacks.tools4j.config.internal.core.xml.XmlSchemaManager;
 import org.deephacks.tools4j.config.model.Bean;
+import org.deephacks.tools4j.config.model.Bean.BeanId;
 import org.deephacks.tools4j.config.spi.BeanManager;
 import org.deephacks.tools4j.config.spi.SchemaManager;
 import org.deephacks.tools4j.config.spi.ValidationManager;
@@ -37,14 +39,13 @@ import org.deephacks.tools4j.support.test.Database;
 import org.deephacks.tools4j.support.test.JUnitUtils;
 import org.deephacks.tools4j.support.web.jpa.EntityManagerFactoryCreator;
 import org.deephacks.tools4j.support.web.jpa.ThreadLocalEntityManager;
-import org.junit.Test;
 
 /**
  * FamilyTest is dependent on mysql to work correctly.
  */
 public class FamilyTest {
     // intentially removed from test suite. Uncomment for demo purposes in eclipse.
-    @Test
+    //@Test
     public void passing_test() {
         File scriptDir = JUnitUtils.getMavenProjectChildFile(Jpa20BeanManager.class,
                 "src/main/resources/META-INF/");
@@ -52,7 +53,7 @@ public class FamilyTest {
         Database.create(MYSQL, scriptDir).initalize();
         MockLookup.addMockInstances(ValidationManager.class, new Jsr303ValidationManager());
         MockLookup.addMockInstances(SchemaManager.class, new XmlSchemaManager());
-        MockLookup.addMockInstances(BeanManager.class, new Jpa20BeanManager());
+        MockLookup.addMockInstances(BeanManager.class, new XmlBeanManager());
         MockLookup.addMockInstances(AdminContext.class, new AdminCoreContext());
         MockLookup.addMockInstances(RuntimeContext.class, new RuntimeCoreContext());
         AdminContext admin = Lookup.get().lookup(AdminContext.class);
@@ -70,6 +71,10 @@ public class FamilyTest {
         Bean child6 = createFamily("1.2", child3, child4, "FEMALE");
 
         Bean child7 = createFamily("1.1.1", child5, child6, "MALE");
+
+        Bean b = Bean.create(BeanId.create("1.1", "Person"));
+        b.addProperty("lastName", "sdf");
+        admin.merge(b);
 
         ThreadLocalEntityManager.close();
 
