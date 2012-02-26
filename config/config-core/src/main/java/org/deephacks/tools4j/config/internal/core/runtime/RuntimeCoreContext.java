@@ -13,15 +13,16 @@
  */
 package org.deephacks.tools4j.config.internal.core.runtime;
 
-import java.util.Collection;
+import static org.deephacks.tools4j.config.internal.core.ConfigCore.lookupBeanManager;
+import static org.deephacks.tools4j.config.internal.core.ConfigCore.lookupSchemaManager;
+import static org.deephacks.tools4j.config.internal.core.ConfigCore.setSchema;
+
 import java.util.List;
 import java.util.Map;
 
 import org.deephacks.tools4j.config.Config;
 import org.deephacks.tools4j.config.Id;
 import org.deephacks.tools4j.config.RuntimeContext;
-import org.deephacks.tools4j.config.internal.core.xml.XmlBeanManager;
-import org.deephacks.tools4j.config.internal.core.xml.XmlSchemaManager;
 import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
 import org.deephacks.tools4j.config.model.Events;
@@ -31,7 +32,6 @@ import org.deephacks.tools4j.config.spi.BeanManager;
 import org.deephacks.tools4j.config.spi.SchemaManager;
 import org.deephacks.tools4j.config.spi.ValidationManager;
 import org.deephacks.tools4j.support.ServiceProvider;
-import org.deephacks.tools4j.support.SystemProperties;
 import org.deephacks.tools4j.support.conversion.Conversion;
 import org.deephacks.tools4j.support.lookup.Lookup;
 import org.deephacks.tools4j.support.reflections.ClassIntrospector;
@@ -100,7 +100,7 @@ public class RuntimeCoreContext extends RuntimeContext {
         Schema s = schemaManager.getSchema(clazz.getAnnotation(Config.class).name());
         Map<String, Schema> schemas = schemaManager.getSchemas();
         Map<BeanId, Bean> beans = beanManager.list(s.getName());
-        setSchema(beans, schemas);
+        setSchema(schemas, beans);
         for (Bean bean : beans.values()) {
             setSingletonReferences(bean, schemas);
         }
@@ -120,30 +120,6 @@ public class RuntimeCoreContext extends RuntimeContext {
         setSchema(bean, schemas);
         setSingletonReferences(bean, schemas);
         return conversion.convert(bean, clazz);
-    }
-
-    private static void setSchema(Bean b, Map<String, Schema> schemas) {
-        List<String> names = b.getReferenceNames();
-        for (String name : names) {
-            for (BeanId id : b.getReference(name)) {
-                Bean ref = id.getBean();
-                if (ref != null) {
-                    setSchema(ref, schemas);
-                }
-            }
-        }
-        Schema s = schemas.get(b.getId().getSchemaName());
-        if (s == null) {
-            throw new UnsupportedOperationException(
-                    "Schema must always be available for any beans. This is a programming error/bug.");
-        }
-        b.set(s);
-    }
-
-    private static void setSchema(Map<BeanId, Bean> beans, Map<String, Schema> schemas) {
-        for (Bean b : beans.values()) {
-            setSchema(b, schemas);
-        }
     }
 
     private BeanId getSingletonId(Schema s, Class<?> configurable) {
@@ -174,41 +150,7 @@ public class RuntimeCoreContext extends RuntimeContext {
         }
     }
 
-    private static BeanManager lookupBeanManager() {
-        Collection<BeanManager> beanManagers = Lookup.get().lookupAll(BeanManager.class);
-        if (beanManagers.size() == 1) {
-            return beanManagers.iterator().next();
-        }
-        String preferedBeanManager = SystemProperties.createDefault().get("config.beanmanager");
-        if (preferedBeanManager == null || "".equals(preferedBeanManager)) {
-            return new XmlBeanManager();
-        }
-        for (BeanManager beanManager : beanManagers) {
-            if (beanManager.getClass().getName().equals(preferedBeanManager)) {
-                return beanManager;
-            }
-        }
-        return new XmlBeanManager();
-    }
-
-    private static SchemaManager lookupSchemaManager() {
-        Collection<SchemaManager> schemaManagers = Lookup.get().lookupAll(SchemaManager.class);
-        if (schemaManagers.size() == 1) {
-            return schemaManagers.iterator().next();
-        }
-        String preferedSchemaManager = SystemProperties.createDefault().get("config.schemamanager");
-        if (preferedSchemaManager == null || "".equals(preferedSchemaManager)) {
-            return new XmlSchemaManager();
-        }
-        for (SchemaManager schemaManager : schemaManagers) {
-            if (schemaManager.getClass().getName().equals(preferedSchemaManager)) {
-                return schemaManager;
-            }
-        }
-        return new XmlSchemaManager();
-    }
-
-    private void doLookup() {
+    public void doLookup() {
         if (conversion == null) {
             conversion = Conversion.get();
             conversion.register(new ClassToSchemaConverter());
@@ -227,4 +169,5 @@ public class RuntimeCoreContext extends RuntimeContext {
         }
 
     }
+
 }

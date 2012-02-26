@@ -52,23 +52,29 @@ public class BeanToObjectConverter implements Converter<Bean, Object> {
         } catch (Exception e) {
             throw new UnsupportedOperationException(e);
         }
-        Schema schema = source.getSchema();
-        Map<String, Object> values = new HashMap<String, Object>();
-        convertProperty(source, schema, values);
-        convertPropertyList(source, schema, values);
-        convertPropertyRef(source, schema, values);
-        convertPropertyRefList(source, schema, values);
-        convertPropertyRefMap(source, schema, values);
-        if (!schema.getId().isSingleton()) {
-            // do not try to inject singleton id: the field is static final
-            values.put(getIdField(specificType), source.getId().getInstanceId());
-        }
-        inject(instance, values);
-        return instance;
-
+        Map<String, Object> valuesToInject = new HashMap<String, Object>();
+        Map<BeanId, Object> instanceCache = new HashMap<BeanId, Object>();
+        return convert(source, instance, valuesToInject, instanceCache);
     }
 
-    public void inject(Object instance, Map<String, Object> values) {
+    private Object convert(Bean source, Object instance, Map<String, Object> valuesToInject,
+            Map<BeanId, Object> instanceCache) {
+        instanceCache.put(source.getId(), instance);
+        convertProperty(source, valuesToInject);
+        convertPropertyList(source, valuesToInject);
+        convertPropertyRef(source, valuesToInject, instanceCache);
+        convertPropertyRefList(source, valuesToInject, instanceCache);
+        convertPropertyRefMap(source, valuesToInject, instanceCache);
+        Schema schema = source.getSchema();
+        if (!schema.getId().isSingleton()) {
+            // do not try to inject singleton id: the field is static final
+            valuesToInject.put(getIdField(instance.getClass()), source.getId().getInstanceId());
+        }
+        inject(instance, valuesToInject);
+        return instance;
+    }
+
+    private void inject(Object instance, Map<String, Object> values) {
         List<Field> fields = findFields(instance.getClass());
         for (Field field : fields) {
             field.setAccessible(true);
@@ -86,8 +92,9 @@ public class BeanToObjectConverter implements Converter<Bean, Object> {
         }
     }
 
-    private void convertPropertyRefMap(Bean source, Schema schema, Map<String, Object> values) {
-        for (SchemaPropertyRefMap prop : schema.get(SchemaPropertyRefMap.class)) {
+    private void convertPropertyRefMap(Bean source, Map<String, Object> values,
+            Map<BeanId, Object> instanceCache) {
+        for (SchemaPropertyRefMap prop : source.getSchema().get(SchemaPropertyRefMap.class)) {
             List<BeanId> beans = source.getReference(prop.getName());
             if (beans == null) {
                 continue;
@@ -96,7 +103,16 @@ public class BeanToObjectConverter implements Converter<Bean, Object> {
             for (BeanId beanId : beans) {
                 Bean b = beanId.getBean();
                 if (b != null) {
-                    Object beanInstance = conversion.convert(b, forName(b.getSchema().getType()));
+                    Object beanInstance = instanceCache.get(beanId);
+                    if (beanInstance == null) {
+                        try {
+                            beanInstance = newInstance(forName(b.getSchema().getType()));
+                        } catch (Exception e) {
+                            throw new UnsupportedOperationException(e);
+                        }
+                        beanInstance = convert(b, beanInstance, new HashMap<String, Object>(),
+                                instanceCache);
+                    }
                     c.put(beanId.getInstanceId(), beanInstance);
                 }
             }
@@ -104,18 +120,28 @@ public class BeanToObjectConverter implements Converter<Bean, Object> {
         }
     }
 
-    private void convertPropertyRefList(Bean source, Schema schema, Map<String, Object> values) {
-        for (SchemaPropertyRefList prop : schema.get(SchemaPropertyRefList.class)) {
-            List<BeanId> beans = source.getReference(prop.getName());
-            if (beans == null) {
+    private void convertPropertyRefList(Bean source, Map<String, Object> values,
+            Map<BeanId, Object> instanceCache) {
+        for (SchemaPropertyRefList prop : source.getSchema().get(SchemaPropertyRefList.class)) {
+            List<BeanId> references = source.getReference(prop.getName());
+            if (references == null) {
                 continue;
             }
             Collection<Object> c = newCollection(forName(prop.getCollectionType()));
-            for (BeanId beanId : beans) {
+            for (BeanId beanId : references) {
                 Bean b = beanId.getBean();
                 if (b != null) {
-                    String type = b.getSchema().getType();
-                    Object beanInstance = conversion.convert(b, forName(type));
+                    Object beanInstance = instanceCache.get(beanId);
+                    if (beanInstance == null) {
+                        String type = b.getSchema().getType();
+                        try {
+                            beanInstance = newInstance(forName(type));
+                        } catch (Exception e) {
+                            throw new UnsupportedOperationException(e);
+                        }
+                        beanInstance = convert(b, beanInstance, new HashMap<String, Object>(),
+                                instanceCache);
+                    }
                     c.add(beanInstance);
                 }
             }
@@ -123,8 +149,9 @@ public class BeanToObjectConverter implements Converter<Bean, Object> {
         }
     }
 
-    private void convertPropertyRef(Bean source, Schema schema, Map<String, Object> values) {
-        for (SchemaPropertyRef prop : schema.get(SchemaPropertyRef.class)) {
+    private void convertPropertyRef(Bean source, Map<String, Object> values,
+            Map<BeanId, Object> instanceCache) {
+        for (SchemaPropertyRef prop : source.getSchema().get(SchemaPropertyRef.class)) {
             BeanId id = source.getFirstReference(prop.getName());
             if (id == null) {
                 continue;
@@ -134,15 +161,26 @@ public class BeanToObjectConverter implements Converter<Bean, Object> {
                 continue;
             }
             Schema refSchema = ref.getSchema();
-            SchemaPropertyRef schemaRef = schema.get(SchemaPropertyRef.class, prop.getName());
-            Object beanInstance = conversion.convert(ref, forName(refSchema.getType()));
+            SchemaPropertyRef schemaRef = source.getSchema().get(SchemaPropertyRef.class,
+                    prop.getName());
+            Object beanInstance = instanceCache.get(id);
+            if (beanInstance == null) {
+                try {
+                    beanInstance = newInstance(forName(refSchema.getType()));
+                } catch (Exception e) {
+                    throw new UnsupportedOperationException(e);
+                }
+                beanInstance = convert(ref, beanInstance, new HashMap<String, Object>(),
+                        instanceCache);
+            }
+
             values.put(schemaRef.getFieldName(), beanInstance);
 
         }
     }
 
-    private void convertPropertyList(Bean source, Schema schema, Map<String, Object> values) {
-        for (SchemaPropertyList prop : schema.get(SchemaPropertyList.class)) {
+    private void convertPropertyList(Bean source, Map<String, Object> values) {
+        for (SchemaPropertyList prop : source.getSchema().get(SchemaPropertyList.class)) {
             List<String> vals = source.getValues(prop.getName());
             String field = prop.getFieldName();
 
@@ -159,8 +197,8 @@ public class BeanToObjectConverter implements Converter<Bean, Object> {
         }
     }
 
-    private void convertProperty(Bean source, Schema schema, Map<String, Object> values) {
-        for (SchemaProperty prop : schema.get(SchemaProperty.class)) {
+    private void convertProperty(Bean source, Map<String, Object> values) {
+        for (SchemaProperty prop : source.getSchema().get(SchemaProperty.class)) {
             String value = source.getSingleValue(prop.getName());
             String field = prop.getFieldName();
             Object converted = conversion.convert(value, forName(prop.getType()));

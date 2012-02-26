@@ -330,4 +330,17 @@ public class Events {
         Event event = new Event(MODULE_NAME, CFG309, MessageFormat.format(CFG309_MSG, msg));
         return new AbortRuntimeException(event);
     }
+
+    /**
+     * {@value} - Beans of same type have circular references. 
+     */
+    public static final int CFG310 = 310;
+    private static final String CFG310_MSG = "Beans of same type have circular references: {0} {1}";
+
+    @EventDoc(module = MODULE_NAME, code = CFG310,
+            desc = "Beans of same type have circular references.")
+    public static AbortRuntimeException CFG310_CIRCULAR_REF(BeanId a, BeanId b) {
+        Event event = new Event(MODULE_NAME, CFG310, MessageFormat.format(CFG310_MSG, a, b));
+        return new AbortRuntimeException(event);
+    }
 }

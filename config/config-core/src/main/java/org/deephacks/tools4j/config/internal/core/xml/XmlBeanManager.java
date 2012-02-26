@@ -67,34 +67,26 @@ public class XmlBeanManager extends BeanManager {
 
     @Override
     public Bean getEager(BeanId id) {
-        List<Bean> all = readValues();
-        Bean bean = getEagerly(id, all);
-        if (bean == null) {
-            throw CFG304_BEAN_DOESNT_EXIST(id);
-        }
-        return bean;
+        Map<BeanId, Bean> all = readValuesAsMap();
+        return getEagerly(id, all);
     }
 
-    private Bean getEagerly(BeanId id, List<Bean> all) {
-        Bean result = null;
-        for (Bean b : all) {
-            if (b.getId().equals(id)) {
-                result = b;
-                break;
-            }
-        }
+    private Bean getEagerly(BeanId id, Map<BeanId, Bean> all) {
+        Bean result = all.get(id);
         if (result == null) {
-            return null;
+            throw CFG304_BEAN_DOESNT_EXIST(id);
         }
         // bean found, initalize references.
-        for (String name : result.getReferenceNames()) {
-            for (BeanId refId : result.getReference(name)) {
-                Bean b = getBean(refId, all);
-                if (b == null) {
-                    throw CFG301_MISSING_RUNTIME_REF(result.getId(), refId);
-                }
-                refId.setBean(b);
+        for (BeanId ref : result.getReferences()) {
+            if (ref.getBean() != null) {
+                continue;
             }
+            Bean refBean = all.get(ref);
+            if (refBean == null) {
+                throw CFG301_MISSING_RUNTIME_REF(result.getId(), ref);
+            }
+            ref.setBean(refBean);
+            getEagerly(ref, all);
         }
         return result;
     }
@@ -154,6 +146,7 @@ public class XmlBeanManager extends BeanManager {
                 ref.setBean(predecessor);
             }
         }
+        beansToValidate.putAll(predecessors);
         return beansToValidate;
     }
 
@@ -182,8 +175,8 @@ public class XmlBeanManager extends BeanManager {
 
     @Override
     public Bean getSingleton(String schemaName) throws IllegalArgumentException {
-        List<Bean> all = readValues();
-        for (Bean bean : all) {
+        Map<BeanId, Bean> all = readValuesAsMap();
+        for (Bean bean : all.values()) {
             if (bean.getId().getSchemaName().equals(schemaName)) {
                 if (!bean.getId().isSingleton()) {
                     throw new IllegalArgumentException("Schema [" + schemaName
@@ -200,21 +193,11 @@ public class XmlBeanManager extends BeanManager {
         return null;
     }
 
-    private Bean getBean(BeanId ref, List<Bean> all) {
-        for (Bean bean : all) {
-            if (ref.equals(bean.getId())) {
-                // recurse down the tree.
-                return getEagerly(ref, all);
-            }
-        }
-        return null;
-    }
-
     @Override
     public Map<BeanId, Bean> list(String name) {
-        List<Bean> all = readValues();
+        Map<BeanId, Bean> all = readValuesAsMap();
         Map<BeanId, Bean> result = new HashMap<BeanId, Bean>();
-        for (Bean b : all) {
+        for (Bean b : all.values()) {
             if (b.getId().getSchemaName().equals(name)) {
                 Bean bean = getEagerly(b.getId(), all);
                 result.put(bean.getId(), bean);

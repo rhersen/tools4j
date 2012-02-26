@@ -13,8 +13,10 @@
  */
 package org.deephacks.tools4j.config.internal.core.admin;
 
+import static org.deephacks.tools4j.config.internal.core.ConfigCore.lookupBeanManager;
+import static org.deephacks.tools4j.config.internal.core.ConfigCore.lookupSchemaManager;
+import static org.deephacks.tools4j.config.internal.core.ConfigCore.setSchema;
 import static org.deephacks.tools4j.config.internal.core.admin.SchemaValidator.validateSchema;
-import static org.deephacks.tools4j.config.model.Events.CFG101_SCHEMA_NOT_EXIST;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,8 +27,6 @@ import java.util.Map;
 
 import org.deephacks.tools4j.config.admin.AdminContext;
 import org.deephacks.tools4j.config.internal.core.runtime.BeanToObjectConverter;
-import org.deephacks.tools4j.config.internal.core.xml.XmlBeanManager;
-import org.deephacks.tools4j.config.internal.core.xml.XmlSchemaManager;
 import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
 import org.deephacks.tools4j.config.model.BeanUtils;
@@ -36,9 +36,10 @@ import org.deephacks.tools4j.config.spi.BeanManager;
 import org.deephacks.tools4j.config.spi.SchemaManager;
 import org.deephacks.tools4j.config.spi.ValidationManager;
 import org.deephacks.tools4j.support.ServiceProvider;
-import org.deephacks.tools4j.support.SystemProperties;
 import org.deephacks.tools4j.support.conversion.Conversion;
 import org.deephacks.tools4j.support.lookup.Lookup;
+
+import com.google.common.base.Preconditions;
 
 /**
  * AdminCoreContext is responsible for separating the admin and runtime 
@@ -58,6 +59,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public List<Bean> list(String schemaName) {
+        Preconditions.checkNotNull(schemaName);
         doLookup();
         Map<BeanId, Bean> beans = beanManager.list(schemaName);
         setSchema(schemaManager.getSchemas(), beans);
@@ -66,6 +68,10 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public List<Bean> list(String schemaName, Collection<String> instanceIds) {
+        Preconditions.checkNotNull(schemaName);
+        if (instanceIds == null || instanceIds.isEmpty()) {
+            return new ArrayList<Bean>();
+        }
         doLookup();
         Map<BeanId, Bean> beans = beanManager.list(schemaName);
         Map<BeanId, Bean> result = new HashMap<BeanId, Bean>();
@@ -80,6 +86,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public Bean get(BeanId beanId) {
+        Preconditions.checkNotNull(beanId);
         doLookup();
         Bean bean = beanManager.getEager(beanId);
         Map<String, Schema> schemas = schemaManager.getSchemas();
@@ -90,6 +97,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void create(Bean bean) {
+        Preconditions.checkNotNull(bean);
         doLookup();
         setSchema(schemaManager.getSchemas(), bean);
         validateSchema(bean);
@@ -102,6 +110,9 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void create(Collection<Bean> beans) {
+        if (beans == null || beans.isEmpty()) {
+            return;
+        }
         doLookup();
         setSchema(schemaManager.getSchemas(), beans);
         validateSchema(beans);
@@ -114,6 +125,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void set(Bean bean) {
+        Preconditions.checkNotNull(bean);
         doLookup();
         setSchema(schemaManager.getSchemas(), bean);
         validateSchema(bean);
@@ -126,9 +138,13 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void set(Collection<Bean> beans) {
+        if (beans == null || beans.isEmpty()) {
+            return;
+        }
         doLookup();
         setSchema(schemaManager.getSchemas(), beans);
         validateSchema(beans);
+
         if (validationManager != null) {
             initReferences(beans);
             for (Bean bean : beans) {
@@ -140,6 +156,7 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void merge(Bean bean) {
+        Preconditions.checkNotNull(bean);
         doLookup();
         setSchema(schemaManager.getSchemas(), bean);
         validateSchema(bean);
@@ -151,6 +168,9 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void merge(Collection<Bean> beans) {
+        if (beans == null || beans.isEmpty()) {
+            return;
+        }
         doLookup();
         setSchema(schemaManager.getSchemas(), beans);
         validateSchema(beans);
@@ -165,12 +185,17 @@ public class AdminCoreContext extends AdminContext {
 
     @Override
     public void delete(BeanId beanId) {
+        Preconditions.checkNotNull(beanId);
         doLookup();
         beanManager.delete(beanId);
     }
 
     @Override
     public void delete(String name, Collection<String> instances) {
+        Preconditions.checkNotNull(name);
+        if (instances == null || instances.isEmpty()) {
+            return;
+        }
         doLookup();
         beanManager.delete(name, instances);
     }
@@ -205,7 +230,9 @@ public class AdminCoreContext extends AdminContext {
         // since we are validating mergebean predecessors, we need to make sure
         // that they see a merged reference (not unmerged reference currently in storage)
         // before validation can proceed.
-        List<Bean> mergeBeanReferences = findReferences(mergebean.getId(), beansToValidate.values());
+        ArrayList<Bean> mergeBeanReferences = new ArrayList<Bean>();
+        ArrayList<Bean> checked = new ArrayList<Bean>();
+        findReferences(mergebean.getId(), beansToValidate.values(), mergeBeanReferences, checked);
         // merge all references
         merge(mergeBeanReferences, mergebean);
         // ready to validate
@@ -218,7 +245,9 @@ public class AdminCoreContext extends AdminContext {
         // since we are validating setbean predecessors, we need to make sure
         // that they see a replaced/set reference (not old reference currently in storage)
         // before validation can proceed.
-        List<Bean> setBeanReferences = findReferences(setbean.getId(), beansToValidate.values());
+        ArrayList<Bean> setBeanReferences = new ArrayList<Bean>();
+        ArrayList<Bean> checked = new ArrayList<Bean>();
+        findReferences(setbean.getId(), beansToValidate.values(), setBeanReferences, checked);
         for (Bean ref : setBeanReferences) {
             // clearing and then merging have same 
             // effect as a 'set' operation
@@ -232,31 +261,38 @@ public class AdminCoreContext extends AdminContext {
      * Does a recursive check if predecessor have a particular reference and if
      * so return those predecessor references.
      */
-    private List<Bean> findReferences(BeanId reference, Collection<Bean> predecessors) {
-        ArrayList<Bean> matches = new ArrayList<Bean>();
+    private List<Bean> findReferences(BeanId reference, Collection<Bean> predecessors,
+            ArrayList<Bean> matches, ArrayList<Bean> checked) {
+
         for (Bean predecessor : predecessors) {
-            matches.addAll(findReferences(reference, predecessor));
+            findReferences(reference, predecessor, matches, checked);
         }
         return matches;
     }
 
-    private List<Bean> findReferences(BeanId reference, Bean predecessor) {
-        ArrayList<Bean> matches = new ArrayList<Bean>();
-        if (reference.equals(predecessor.getId())) {
+    private void findReferences(BeanId reference, Bean predecessor, ArrayList<Bean> matches,
+            ArrayList<Bean> checked) {
+        if (checked.contains(predecessor)) {
+            return;
+        }
+        checked.add(predecessor);
+        if (reference.equals(predecessor.getId()) && !matches.contains(predecessor)) {
             matches.add(predecessor);
         }
         for (BeanId ref : predecessor.getReferences()) {
+            if (ref.getBean() == null) {
+                continue;
+            }
+            if (matches.contains(ref.getBean())) {
+                continue;
+            }
             if (ref.equals(reference)) {
                 matches.add(ref.getBean());
             }
-            Bean bean = ref.getBean();
-            if (bean == null) {
-                // look no deeper 
-                continue;
-            }
-            matches.addAll(findReferences(reference, bean));
+
+            findReferences(reference, ref.getBean(), matches, checked);
         }
-        return matches;
+
     }
 
     private void merge(List<Bean> sources, Bean mergeBean) {
@@ -335,70 +371,6 @@ public class AdminCoreContext extends AdminContext {
                 }
             }
         }
-    }
-
-    private void setSchema(Map<String, Schema> schemas, Map<BeanId, Bean> beans) {
-        for (Bean bean : beans.values()) {
-            setSchema(schemas, bean);
-        }
-    }
-
-    private void setSchema(Map<String, Schema> schemas, Collection<Bean> beans) {
-        for (Bean bean : beans) {
-            setSchema(schemas, bean);
-        }
-    }
-
-    private void setSchema(Map<String, Schema> schemas, Bean bean) {
-        Schema s = schemas.get(bean.getId().getSchemaName());
-        if (s == null) {
-            throw CFG101_SCHEMA_NOT_EXIST(bean.getId().getSchemaName());
-        }
-        bean.set(s);
-
-        if (bean.getReferences() == null) {
-            return;
-        }
-        for (BeanId id : bean.getReferences()) {
-            Bean ref = id.getBean();
-            if (ref != null) {
-                setSchema(schemas, ref);
-            }
-        }
-    }
-
-    private static BeanManager lookupBeanManager() {
-        Collection<BeanManager> beanManagers = Lookup.get().lookupAll(BeanManager.class);
-        if (beanManagers.size() == 1) {
-            return beanManagers.iterator().next();
-        }
-        String preferedBeanManager = SystemProperties.createDefault().get("config.beanmanager");
-        if (preferedBeanManager == null || "".equals(preferedBeanManager)) {
-            return new XmlBeanManager();
-        }
-        for (BeanManager beanManager : beanManagers) {
-            if (beanManager.getClass().getName().equals(preferedBeanManager)) {
-                return beanManager;
-            }
-        }
-        return new XmlBeanManager();
-    }
-
-    private static SchemaManager lookupSchemaManager() {
-        Collection<SchemaManager> schemaManagers = Lookup.get().lookupAll(SchemaManager.class);
-        if (schemaManagers.size() == 1) {
-            return schemaManagers.iterator().next();
-        }
-        String preferedSchemaManager = SystemProperties.createDefault().get("config.schemamanager");
-        if (preferedSchemaManager == null || "".equals(preferedSchemaManager)) {
-            return new XmlSchemaManager();
-        }
-        for (SchemaManager schemaManager : schemaManagers) {
-            if (schemaManager.getClass().getName().equals(preferedSchemaManager)) {
-                return schemaManager;
-            }
-        }
-        return new XmlSchemaManager();
     }
 
     private void setSingletonReferences(Bean bean, Map<String, Schema> schemas) {

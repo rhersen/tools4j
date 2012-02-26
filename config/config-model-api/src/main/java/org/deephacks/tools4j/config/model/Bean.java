@@ -15,6 +15,7 @@ package org.deephacks.tools4j.config.model;
 
 import static com.google.common.base.Objects.equal;
 import static org.deephacks.tools4j.config.model.Events.CFG107_MISSING_ID;
+import static org.deephacks.tools4j.config.model.Events.CFG310_CIRCULAR_REF;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -266,6 +267,7 @@ public class Bean implements Serializable {
     public void addReference(String propertyName, List<BeanId> refs) {
         Preconditions.checkNotNull(refs);
         Preconditions.checkNotNull(propertyName);
+        checkCircularReference(refs.toArray(new BeanId[0]));
         List<BeanId> list = references.get(propertyName);
         if (list == null) {
             list = new ArrayList<BeanId>();
@@ -273,6 +275,18 @@ public class Bean implements Serializable {
             references.put(propertyName, list);
         } else {
             list.addAll(refs);
+        }
+    }
+
+    /**
+     * Check that references does not point to self.
+     * @param references
+     */
+    private void checkCircularReference(BeanId... references) {
+        for (BeanId beanId : references) {
+            if (getId().equals(beanId)) {
+                throw CFG310_CIRCULAR_REF(getId(), getId());
+            }
         }
     }
 
@@ -288,6 +302,7 @@ public class Bean implements Serializable {
     public void addReference(String propertyName, BeanId ref) {
         Preconditions.checkNotNull(ref);
         Preconditions.checkNotNull(propertyName);
+        checkCircularReference(ref);
         List<BeanId> list = references.get(propertyName);
         if (list == null) {
             list = new ArrayList<BeanId>();
@@ -343,6 +358,7 @@ public class Bean implements Serializable {
             references.put(propertyName, null);
             return;
         }
+        checkCircularReference(values.toArray(new BeanId[0]));
         references.put(propertyName, values);
     }
 
@@ -358,6 +374,7 @@ public class Bean implements Serializable {
             references.put(propertyName, null);
             return;
         }
+        checkCircularReference(value);
         List<BeanId> values = new ArrayList<BeanId>();
         values.add(value);
         references.put(propertyName, values);
@@ -501,20 +518,36 @@ public class Bean implements Serializable {
         }
 
         @Override
-        public boolean equals(Object obj) {
-            if (!(obj instanceof BeanId)) {
-                return false;
-            }
-
-            BeanId other = (BeanId) obj;
-            return Objects.equal(getInstanceId(), other.getInstanceId())
-                    && Objects.equal(getSchemaName(), other.getSchemaName());
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((instanceId == null) ? 0 : instanceId.hashCode());
+            result = prime * result + ((schemaName == null) ? 0 : schemaName.hashCode());
+            return result;
         }
 
         @Override
-        public int hashCode() {
-            return Objects.hashCode(getInstanceId(), getSchemaName());
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            BeanId other = (BeanId) obj;
+            if (instanceId == null) {
+                if (other.instanceId != null)
+                    return false;
+            } else if (!instanceId.equals(other.instanceId))
+                return false;
+            if (schemaName == null) {
+                if (other.schemaName != null)
+                    return false;
+            } else if (!schemaName.equals(other.schemaName))
+                return false;
+            return true;
         }
+
     }
 
 }
