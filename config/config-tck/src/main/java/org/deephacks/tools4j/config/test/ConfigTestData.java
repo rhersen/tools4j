@@ -140,6 +140,10 @@ public class ConfigTestData {
         return new JSR303Validation(id);
     }
 
+    public Person getPerson(String id) {
+        return new Person(id);
+    }
+
     public static final String GRANDFATHER_SCHEMA_NAME = "GrandfatherSchemaName";
 
     @Config(name = GRANDFATHER_SCHEMA_NAME, desc = "a test class")
@@ -456,6 +460,29 @@ public class ConfigTestData {
 
         public BeanId getBeanId() {
             return BeanId.createSingleton(id, VALIDATION_SCHEMA_NAME);
+        }
+    }
+
+    @Config(name = "person", desc = "desc")
+    public class Person {
+        @Id(desc = "")
+        public String id;
+
+        @Config(desc = "")
+        public Person bestFriend;
+
+        @Config(desc = "")
+        public List<Person> closeFriends = new ArrayList<Person>();
+
+        @Config(desc = "")
+        public Map<String, Person> colleauges = new HashMap<String, Person>();
+
+        public Person(String id) {
+            this.id = id;
+        }
+
+        public Person() {
+
         }
     }
 }

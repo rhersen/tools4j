@@ -43,6 +43,7 @@ import junit.framework.AssertionFailedError;
 import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
 import org.deephacks.tools4j.config.test.ConfigTestData.Grandfather;
+import org.deephacks.tools4j.config.test.ConfigTestData.Person;
 import org.deephacks.tools4j.config.test.ConfigTestData.Singleton;
 import org.deephacks.tools4j.config.test.ConfigTestData.SingletonParent;
 import org.deephacks.tools4j.support.event.AbortRuntimeException;
@@ -472,6 +473,51 @@ public abstract class ConfigTckTests extends ConfigDefaultSetup {
         } catch (AbortRuntimeException e) {
             assertThat(e.getEvent().getCode(), is(CFG105));
         }
+
+    }
+
+    @Test
+    public void test_circular_references() {
+        String personSchema = "person";
+        runtime.register(Person.class);
+
+        BeanId aId = BeanId.create("a", personSchema);
+        BeanId bId = BeanId.create("b", personSchema);
+        BeanId cId = BeanId.create("c", personSchema);
+        BeanId dId = BeanId.create("d", personSchema);
+
+        Bean a = Bean.create(aId);
+        Bean b = Bean.create(bId);
+        Bean c = Bean.create(cId);
+        Bean d = Bean.create(dId);
+
+        admin.create(Arrays.asList(a, b, c, d));
+
+        a.setReference("bestFriend", bId);
+        b.setReference("bestFriend", aId);
+        c.setReference("bestFriend", dId);
+        d.setReference("bestFriend", cId);
+
+        a.addReference("closeFriends", Arrays.asList(bId, cId, dId));
+        b.addReference("closeFriends", Arrays.asList(aId, cId, dId));
+        c.addReference("closeFriends", Arrays.asList(aId, bId, dId));
+        d.addReference("closeFriends", Arrays.asList(aId, bId, cId));
+
+        a.addReference("colleauges", Arrays.asList(bId, cId, dId));
+        b.addReference("colleauges", Arrays.asList(aId, cId, dId));
+        c.addReference("colleauges", Arrays.asList(aId, bId, dId));
+        d.addReference("colleauges", Arrays.asList(aId, bId, cId));
+        /**
+         * Now test all operations from admin and runtime to make 
+         * sure that none of them get stuck in infinite recrusion. 
+         */
+
+        admin.merge(Arrays.asList(a, b, c, d));
+        admin.set(Arrays.asList(a, b, c, d));
+        admin.list("person");
+        admin.get(BeanId.create("b", "person"));
+        runtime.all(Person.class);
+        runtime.get("c", Person.class);
 
     }
 

@@ -34,39 +34,20 @@ import org.deephacks.tools4j.support.lookup.Lookup;
 public class ConfigCore {
     public static void setSchema(Map<String, Schema> schemas, Collection<Bean> beans) {
         for (Bean bean : beans) {
-            setSchema(schemas, bean);
+            setSchema(bean, schemas);
         }
     }
 
     public static void setSchema(Bean b, Map<String, Schema> schemas) {
         Schema s = schemas.get(b.getId().getSchemaName());
         if (s == null) {
-            throw new UnsupportedOperationException(
-                    "Schema must always be available for any beans. This is a programming error/bug.");
+            throw CFG101_SCHEMA_NOT_EXIST(b.getId().getSchemaName());
         }
         b.set(s);
         for (BeanId id : b.getReferences()) {
             Bean ref = id.getBean();
             if (ref != null && ref.getSchema() == null) {
                 setSchema(ref, schemas);
-            }
-        }
-    }
-
-    public static void setSchema(Map<String, Schema> schemas, Bean bean) {
-        Schema s = schemas.get(bean.getId().getSchemaName());
-        if (s == null) {
-            throw CFG101_SCHEMA_NOT_EXIST(bean.getId().getSchemaName());
-        }
-        bean.set(s);
-
-        if (bean.getReferences() == null) {
-            return;
-        }
-        for (BeanId id : bean.getReferences()) {
-            Bean ref = id.getBean();
-            if (ref != null) {
-                setSchema(schemas, ref);
             }
         }
     }

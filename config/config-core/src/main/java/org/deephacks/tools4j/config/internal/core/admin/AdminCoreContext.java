@@ -90,7 +90,7 @@ public class AdminCoreContext extends AdminContext {
         doLookup();
         Bean bean = beanManager.getEager(beanId);
         Map<String, Schema> schemas = schemaManager.getSchemas();
-        setSchema(schemas, bean);
+        setSchema(bean, schemas);
         setSingletonReferences(bean, schemas);
         return bean;
     }
@@ -99,7 +99,7 @@ public class AdminCoreContext extends AdminContext {
     public void create(Bean bean) {
         Preconditions.checkNotNull(bean);
         doLookup();
-        setSchema(schemaManager.getSchemas(), bean);
+        setSchema(bean, schemaManager.getSchemas());
         validateSchema(bean);
         if (validationManager != null) {
             initReferences(Arrays.asList(bean));
@@ -127,7 +127,7 @@ public class AdminCoreContext extends AdminContext {
     public void set(Bean bean) {
         Preconditions.checkNotNull(bean);
         doLookup();
-        setSchema(schemaManager.getSchemas(), bean);
+        setSchema(bean, schemaManager.getSchemas());
         validateSchema(bean);
         if (validationManager != null) {
             initReferences(Arrays.asList(bean));
@@ -158,7 +158,7 @@ public class AdminCoreContext extends AdminContext {
     public void merge(Bean bean) {
         Preconditions.checkNotNull(bean);
         doLookup();
-        setSchema(schemaManager.getSchemas(), bean);
+        setSchema(bean, schemaManager.getSchemas());
         validateSchema(bean);
         if (validationManager != null) {
             validateMerge(bean);
@@ -216,7 +216,7 @@ public class AdminCoreContext extends AdminContext {
                     Bean ref = indexed.get(id);
                     if (ref == null) {
                         ref = beanManager.getLazy(id);
-                        setSchema(schemaManager.getSchemas(), ref);
+                        setSchema(ref, schemaManager.getSchemas());
                     }
                     id.setBean(ref);
                 }
@@ -315,7 +315,7 @@ public class AdminCoreContext extends AdminContext {
                     Bean bean = cache.get(beanId);
                     if (bean == null) {
                         bean = beanManager.getLazy(beanId);
-                        setSchema(schemaManager.getSchemas(), bean);
+                        setSchema(bean, schemaManager.getSchemas());
                         cache.put(beanId, bean);
                     }
                     beanId.setBean(bean);
@@ -338,7 +338,7 @@ public class AdminCoreContext extends AdminContext {
             for (BeanId beanId : values) {
                 Bean ref = beanManager.getEager(beanId);
                 beanId.setBean(ref);
-                setSchema(schemaManager.getSchemas(), beanId.getBean());
+                setSchema(beanId.getBean(), schemaManager.getSchemas());
             }
         }
     }
@@ -366,7 +366,7 @@ public class AdminCoreContext extends AdminContext {
                         ref = beanManager.getEager(beanId);
                     }
                     beanId.setBean(ref);
-                    setSchema(schemaManager.getSchemas(), beanId.getBean());
+                    setSchema(beanId.getBean(), schemaManager.getSchemas());
 
                 }
             }
