@@ -21,8 +21,11 @@ import static org.deephacks.tools4j.config.model.Events.CFG304_BEAN_DOESNT_EXIST
 import static org.deephacks.tools4j.support.web.jpa.ThreadLocalEntityManager.getEm;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.persistence.EmbeddedId;
@@ -62,17 +65,36 @@ public class JpaBean implements Serializable {
     protected static final String FIND_BEAN_FROM_BEANID_NAME = "FIND_BEAN_FROM_BEANID_NAME";
 
     public static JpaBean findEagerJpaBean(BeanId id) {
-        JpaBean bean = getJpaBeanAndProperties(id);
-        if (bean == null) {
+        JpaBean result = getJpaBeanAndProperties(id);
+        if (result == null) {
+            // bean does not exist
             return null;
         }
-        List<JpaRef> refs = JpaRef.findReferences(bean.getId());
-        for (JpaRef jpaRef : refs) {
-            JpaBean target = findEagerJpaBean(jpaRef.getTarget());
-            jpaRef.setTargetBean(target);
+        Map<BeanId, JpaBean> refs = new HashMap<BeanId, JpaBean>();
+        // collect recursivley
+        collectRefs(result, refs);
+        // now ready to associate references with correct JpaBean
+        for (JpaBean jpaBean : refs.values()) {
+            for (JpaRef ref : jpaBean.getReferences()) {
+
+                JpaBean bean = refs.get(ref.getTarget());
+                ref.setTargetBean(bean);
+            }
         }
-        bean.references.addAll(refs);
-        return bean;
+        return result;
+    }
+
+    private static void collectRefs(JpaBean jpaBean, Map<BeanId, JpaBean> result) {
+        if (result.containsKey(jpaBean.getId())) {
+            // break redundant selects and circular references
+            return;
+        }
+        result.put(jpaBean.getId(), jpaBean);
+        for (JpaRef jpaRef : JpaRef.findReferences(jpaBean.getId())) {
+
+            collectRefs(getJpaBeanAndProperties(jpaRef.getTarget()), result);
+            jpaBean.addReference(jpaRef);
+        }
     }
 
     public static JpaBean findLazyJpaBean(BeanId id) {
@@ -97,17 +119,11 @@ public class JpaBean implements Serializable {
         Query query = getEm().createNamedQuery(FIND_BEANS_FROM_SCHEMA_NAME);
         query.setParameter(1, schemaName);
         List<JpaBean> beans = (List<JpaBean>) query.getResultList();
+        List<JpaBean> result = new ArrayList<JpaBean>();
         for (JpaBean bean : beans) {
-            List<JpaProperty> props = JpaProperty.findProperties(bean.getId());
-            bean.properties.addAll(props);
-            List<JpaRef> refs = JpaRef.findReferences(bean.getId());
-            for (JpaRef jpaRef : refs) {
-                JpaBean target = findEagerJpaBean(jpaRef.getTarget());
-                jpaRef.setTargetBean(target);
-            }
-            bean.references.addAll(refs);
+            result.add(findEagerJpaBean(bean.getId()));
         }
-        return beans;
+        return result;
     }
 
     /**
@@ -115,21 +131,27 @@ public class JpaBean implements Serializable {
      */
     @SuppressWarnings("unchecked")
     public static Set<JpaBean> getBeanToValidate(Bean targetBean) {
-        Set<JpaBean> beansToValidate = new HashSet<JpaBean>();
+        Map<BeanId, JpaBean> beansToValidate = new HashMap<BeanId, JpaBean>();
         List<JpaRef> targetPredecessors = JpaRef.getDirectPredecessors(targetBean.getId());
         // predecessors of target
         for (JpaRef targetPredecessorRef : targetPredecessors) {
-            JpaBean targetPredecessor = getJpaBeanAndProperties(targetPredecessorRef.getSource());
-            initReferences(targetPredecessor, 2);
-            beansToValidate.add(targetPredecessor);
+            JpaBean targetPredecessor = beansToValidate.get(targetPredecessorRef.getSource());
+            if (targetPredecessor == null) {
+                targetPredecessor = getJpaBeanAndProperties(targetPredecessorRef.getSource());
+                initReferences(targetPredecessor, 2);
+            }
+            beansToValidate.put(targetPredecessorRef.getSource(), targetPredecessor);
         }
-        JpaBean target = getJpaBeanAndProperties(targetBean.getId());
+        JpaBean target = beansToValidate.get(targetBean.getId());
         if (target == null) {
-            throw CFG304_BEAN_DOESNT_EXIST(targetBean.getId());
+            target = getJpaBeanAndProperties(targetBean.getId());
+            if (target == null) {
+                throw CFG304_BEAN_DOESNT_EXIST(targetBean.getId());
+            }
+            initReferences(target, 2);
         }
-        initReferences(target, 2);
-        beansToValidate.add(target);
-        return beansToValidate;
+        beansToValidate.put(targetBean.getId(), target);
+        return new HashSet<JpaBean>(beansToValidate.values());
     }
 
     private static void initReferences(JpaBean bean, int successors) {

@@ -13,35 +13,78 @@
  */
 package org.deephacks.tools4j.config.internal.core.jpa;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
 import org.deephacks.tools4j.support.conversion.Conversion;
 import org.deephacks.tools4j.support.conversion.Converter;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 
 public class JpaBeanToBeanConverter implements Converter<JpaBean, Bean> {
     private Conversion conversion = Conversion.get();
 
     @Override
     public Bean convert(JpaBean source, Class<? extends Bean> specificType) {
-        if (source == null) {
-            return null;
+        Bean result = convertProperties(source);
+        Multimap<BeanId, JpaBean> refs = HashMultimap.create();
+        collectRefs(source, refs);
+        Map<BeanId, Bean> beans = convertBeans(refs);
+        for (Bean bean : beans.values()) {
+            for (BeanId id : bean.getReferences()) {
+                if (beans.get(id) == null) {
+                    throw new IllegalStateException(
+                            "Bean ["
+                                    + id
+                                    + "] is not available and this is a bug. Bean reference must be available.");
+                }
+                id.setBean(beans.get(id));
+            }
         }
-
-        BeanId id = BeanId.create(source.getPk().id, source.getPk().schemaName);
-        Bean bean = Bean.create(id);
         for (JpaRef ref : source.getReferences()) {
-            JpaBean target = ref.getTargetBean();
-            if (target == null) {
+            BeanId id = ref.getTarget();
+            id.setBean(beans.get(id));
+            result.addReference(ref.getPropertyName(), id);
+        }
+        return result;
+    }
+
+    private Map<BeanId, Bean> convertBeans(Multimap<BeanId, JpaBean> refs) {
+        Map<BeanId, Bean> beans = new HashMap<BeanId, Bean>();
+        for (JpaBean jpaBean : refs.values()) {
+            if (beans.get(jpaBean.getId()) != null) {
                 continue;
             }
-            Bean beanTarget = conversion.convert(target, Bean.class);
-            BeanId idTarget = target.getId();
-            idTarget.setBean(beanTarget);
-            bean.addReference(ref.getPropertyName(), idTarget);
+            Bean bean = convertProperties(jpaBean);
+            for (JpaRef ref : jpaBean.getReferences()) {
+                bean.addReference(ref.getPropertyName(), ref.getTarget());
+            }
+            beans.put(jpaBean.getId(), bean);
         }
+        return beans;
+    }
+
+    private static Bean convertProperties(JpaBean source) {
+        BeanId id = BeanId.create(source.getPk().id, source.getPk().schemaName);
+        Bean bean = Bean.create(id);
         for (JpaProperty prop : source.getProperties()) {
             bean.addProperty(prop.getPropertyName(), prop.getValue());
         }
         return bean;
+    }
+
+    private static void collectRefs(JpaBean jpaBean, Multimap<BeanId, JpaBean> result) {
+        if (result.containsKey(jpaBean.getId())) {
+            // break redundant selects and circular recursion
+            return;
+        }
+
+        for (JpaRef jpaRef : jpaBean.getReferences()) {
+            result.put(jpaBean.getId(), jpaRef.getTargetBean());
+            collectRefs(jpaRef.getTargetBean(), result);
+        }
     }
 }
