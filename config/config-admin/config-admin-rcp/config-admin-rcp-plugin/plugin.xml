@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         id="application"
+         name="application"
+         point="org.eclipse.core.runtime.applications">
+      <application>
+         <run
+               class="org.deephacks.tools4j.config.admin.rcp.Application">
+         </run>
+      </application>
+   </extension>
+   <extension
+         id="product"
+         point="org.eclipse.core.runtime.products">
+      <product
+            application="config-admin-rcp-plugin.application"
+            name="Config Admin RCP">
+         <property
+               name="appName"
+               value="Config Admin RCP">
+         </property>
+         <property
+                  name="windowImages"
+                  value="icons/alt_window_16.png,icons/alt_window_32.png">
+            </property>
+         <property
+                name="startupForegroundColor"
+                  value="FFFFFF">
+            </property>
+            <property
+                  name="startupMessageRect"
+                  value="7,220,441,20">
+            </property>
+            <property
+                  name="startupProgressRect"
+                  value="0,280,455,15">
+            </property>
+      </product>
+  </extension>
+   <extension
+         point="org.eclipse.ui.views">
+      <view
+            class="org.deephacks.tools4j.config.admin.rcp.view.TreeView"
+            id="org.deephacks.tools4j.config.admin.rcp.treeview"
+            name="Tree Admin View"
+            restorable="true">
+      </view>
+      <view
+            class="org.deephacks.tools4j.config.admin.rcp.view.FormView"
+            id="org.deephacks.tools4j.config.admin.rcp.formview"
+            name="Form Admin View"
+            restorable="true">            
+      </view>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectives">
+      <perspective
+            class="org.deephacks.tools4j.config.admin.rcp.PerspectiveFactory"
+            id="config.admin.rcp.perspective"
+            name="config.admin.rcp.perspective">
+      </perspective>
+   </extension>
+   <extension
+         point="org.eclipse.ui.activities">
+   </extension>
+   <extension
+         point="org.eclipse.ui.services">
+      <sourceProvider
+            provider="org.deephacks.tools4j.config.admin.rcp.view.support.EventBus">
+         <variable
+               name="EventBus"
+               priorityLevel="workbench">
+         </variable>
+      </sourceProvider>
+   </extension>
+
+</plugin>
