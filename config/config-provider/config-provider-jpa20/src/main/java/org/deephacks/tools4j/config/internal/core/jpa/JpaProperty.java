@@ -46,6 +46,10 @@ import com.google.common.base.Objects;
                 query = JpaProperty.DELETE_ALL_PROPERTIES_FOR_BEANID),
         @NamedQuery(name = JpaProperty.DELETE_PROPERTY_FOR_BEANID_NAME,
                 query = JpaProperty.DELETE_PROPERTY_FOR_BEANID),
+        @NamedQuery(name = JpaProperty.FIND_PROPERTIES_FOR_BEANS_DEFAULT_NAME,
+                query = JpaProperty.FIND_PROPERTIES_FOR_BEANS_DEFAULT),
+        @NamedQuery(name = JpaProperty.FIND_PROPERTIES_FOR_BEANS_HIBERNATE_NAME,
+                query = JpaProperty.FIND_PROPERTIES_FOR_BEANS_HIBERNATE),
         @NamedQuery(name = JpaProperty.FIND_PROPERTIES_FOR_BEAN_NAME,
                 query = JpaProperty.FIND_PROPERTIES_FOR_BEAN) })
 public class JpaProperty implements Serializable {
@@ -100,20 +104,23 @@ public class JpaProperty implements Serializable {
     }
 
     protected static final String FIND_PROPERTIES_FOR_BEANS_DEFAULT = "SELECT e FROM JpaProperty e WHERE (e.id IN :ids AND e.schemaName IN :schemaNames)";
+    protected static final String FIND_PROPERTIES_FOR_BEANS_DEFAULT_NAME = "FIND_PROPERTIES_FOR_BEANS_DEFAULT_NAME";
+
     protected static final String FIND_PROPERTIES_FOR_BEANS_HIBERNATE = "SELECT e FROM JpaProperty e WHERE (e.id IN (:ids) AND e.schemaName IN (:schemaNames))";
+    protected static final String FIND_PROPERTIES_FOR_BEANS_HIBERNATE_NAME = "FIND_PROPERTIES_FOR_BEANS_HIBERNATE_NAME";
 
     @SuppressWarnings("unchecked")
     public static List<JpaProperty> findProperties(List<BeanId> beanIds) {
-        String queryString = FIND_PROPERTIES_FOR_BEANS_DEFAULT;
+        String namedQuery = FIND_PROPERTIES_FOR_BEANS_DEFAULT_NAME;
         if (getEm().getClass().getName().contains("hibernate")) {
             /**
              * Hibernate and EclipseLink treat IN queries differently. 
              * EclipseLink mandates NO brackets, while hibernate mandates WITH brackets.
              * In order to support both, this ugly hack is needed. 
              */
-            queryString = FIND_PROPERTIES_FOR_BEANS_HIBERNATE;
+            namedQuery = FIND_PROPERTIES_FOR_BEANS_HIBERNATE_NAME;
         }
-        Query query = getEm().createQuery(queryString);
+        Query query = getEm().createNamedQuery(namedQuery);
         Collection<String> ids = new ArrayList<String>();
         Collection<String> schemaNames = new ArrayList<String>();
         for (BeanId id : beanIds) {
