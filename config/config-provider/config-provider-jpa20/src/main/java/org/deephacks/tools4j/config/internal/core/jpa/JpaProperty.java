@@ -18,6 +18,8 @@ import static com.google.common.base.Objects.toStringHelper;
 import static org.deephacks.tools4j.support.web.jpa.ThreadLocalEntityManager.getEm;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -94,6 +96,32 @@ public class JpaProperty implements Serializable {
         Query query = getEm().createNamedQuery(FIND_PROPERTIES_FOR_BEAN_NAME);
         query.setParameter(1, id.getInstanceId());
         query.setParameter(2, id.getSchemaName());
+        return (List<JpaProperty>) query.getResultList();
+    }
+
+    protected static final String FIND_PROPERTIES_FOR_BEANS_DEFAULT = "SELECT e FROM JpaProperty e WHERE (e.id IN :ids AND e.schemaName IN :schemaNames)";
+    protected static final String FIND_PROPERTIES_FOR_BEANS_HIBERNATE = "SELECT e FROM JpaProperty e WHERE (e.id IN (:ids) AND e.schemaName IN (:schemaNames))";
+
+    @SuppressWarnings("unchecked")
+    public static List<JpaProperty> findProperties(List<BeanId> beanIds) {
+        String queryString = FIND_PROPERTIES_FOR_BEANS_DEFAULT;
+        if (getEm().getClass().getName().contains("hibernate")) {
+            /**
+             * Hibernate and EclipseLink treat IN queries differently. 
+             * EclipseLink mandates NO brackets, while hibernate mandates WITH brackets.
+             * In order to support both, this ugly hack is needed. 
+             */
+            queryString = FIND_PROPERTIES_FOR_BEANS_HIBERNATE;
+        }
+        Query query = getEm().createQuery(queryString);
+        Collection<String> ids = new ArrayList<String>();
+        Collection<String> schemaNames = new ArrayList<String>();
+        for (BeanId id : beanIds) {
+            ids.add(id.getInstanceId());
+            schemaNames.add(id.getSchemaName());
+        }
+        query.setParameter("ids", ids);
+        query.setParameter("schemaNames", schemaNames);
         return (List<JpaProperty>) query.getResultList();
     }
 

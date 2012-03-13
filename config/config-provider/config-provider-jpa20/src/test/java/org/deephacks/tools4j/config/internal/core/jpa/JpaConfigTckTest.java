@@ -34,6 +34,8 @@ import org.deephacks.tools4j.config.admin.AdminContext;
 import org.deephacks.tools4j.config.internal.core.admin.AdminCoreContext;
 import org.deephacks.tools4j.config.internal.core.runtime.RuntimeCoreContext;
 import org.deephacks.tools4j.config.internal.core.xml.XmlSchemaManager;
+import org.deephacks.tools4j.config.model.Bean;
+import org.deephacks.tools4j.config.model.Bean.BeanId;
 import org.deephacks.tools4j.config.spi.BeanManager;
 import org.deephacks.tools4j.config.spi.SchemaManager;
 import org.deephacks.tools4j.config.spi.ValidationManager;
@@ -117,10 +119,29 @@ public class JpaConfigTckTest extends ConfigTckTests {
     // Unique jpa/database provider combination for a specifci test execution.
     private ProviderCombination parameter;
 
+    /**
+     * Test method for doing ad-hoc testing. Uncomment to use.
+     */
+    // @Test
+    public void testMultiple() {
+        BeanId id1 = BeanId.create("id1", "schema1");
+        BeanId id2 = BeanId.create("id2", "schema2");
+        Bean b1 = Bean.create(id1);
+        b1.addProperty("prop1", "prop1");
+
+        Bean b2 = Bean.create(id2);
+        b2.addProperty("prop2", "prop2");
+        new Jpa20BeanManager().create(Arrays.asList(b1, b2));
+        List<JpaBean> beans = JpaBean.findJpaBeans(Arrays.asList(id1, id2));
+        for (JpaBean jpaBean : beans) {
+            System.out.println(jpaBean.getId() + " " + jpaBean.getProperties());
+        }
+    }
+
     @Parameters
     public static Collection<Object[]> data() {
         Collection<Object[]> parameters = new ArrayList<Object[]>();
-        List<String> dbProviders = Arrays.asList(DERBY);
+        List<String> dbProviders = Arrays.asList(MYSQL, POSTGRESQL, DERBY);
         List<String> jpaProviders = Arrays.asList(HIBERNATE, ECLIPSELINK);
         List<List<String>> list = new ArrayList<List<String>>();
         list.add(dbProviders);

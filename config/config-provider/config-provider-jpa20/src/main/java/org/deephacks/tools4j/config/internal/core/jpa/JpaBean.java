@@ -22,6 +22,7 @@ import static org.deephacks.tools4j.support.web.jpa.ThreadLocalEntityManager.get
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -124,6 +125,41 @@ public class JpaBean implements Serializable {
             result.add(findEagerJpaBean(bean.getId()));
         }
         return result;
+    }
+
+    protected static final String FIND_BEANS_DEFAULT = "SELECT e FROM JpaBean e WHERE (e.pk.id IN :ids AND e.pk.schemaName IN :schemaNames)";
+    protected static final String FIND_BEANS_HIBERNATE = "SELECT e FROM JpaBean e WHERE (e.pk.id IN (:ids) AND e.pk.schemaName IN (:schemaNames))";
+
+    @SuppressWarnings("unchecked")
+    public static List<JpaBean> findJpaBeans(List<BeanId> beanIds) {
+        String queryString = FIND_BEANS_DEFAULT;
+        if (getEm().getClass().getName().contains("hibernate")) {
+            /**
+             * Hibernate and EclipseLink treat IN queries differently. 
+             * EclipseLink mandates NO brackets, while hibernate mandates WITH brackets.
+             * In order to support both, this ugly hack is needed.
+             */
+            queryString = FIND_BEANS_HIBERNATE;
+        }
+        Query query = getEm().createQuery(queryString);
+        Collection<String> ids = new ArrayList<String>();
+        Collection<String> schemaNames = new ArrayList<String>();
+        for (BeanId id : beanIds) {
+            ids.add(id.getInstanceId());
+            schemaNames.add(id.getSchemaName());
+        }
+        query.setParameter("ids", ids);
+        query.setParameter("schemaNames", schemaNames);
+        List<JpaBean> beans = (List<JpaBean>) query.getResultList();
+        List<JpaProperty> props = JpaProperty.findProperties(beanIds);
+        for (JpaProperty jpaProperty : props) {
+            for (JpaBean jpaBean : beans) {
+                if (jpaBean.getId().equals(jpaProperty.getId())) {
+                    jpaBean.addProperty(jpaProperty);
+                }
+            }
+        }
+        return beans;
     }
 
     /**
