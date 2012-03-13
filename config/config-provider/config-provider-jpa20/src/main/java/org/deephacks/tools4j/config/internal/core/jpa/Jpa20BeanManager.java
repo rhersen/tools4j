@@ -16,6 +16,7 @@ package org.deephacks.tools4j.config.internal.core.jpa;
 import static org.deephacks.tools4j.config.internal.core.jpa.ExceptionTranslator.translateDelete;
 import static org.deephacks.tools4j.config.internal.core.jpa.ExceptionTranslator.translateMerge;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.deleteJpaBean;
+import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.exists;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.findEagerJpaBean;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.findJpaBeans;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.findLazyJpaBean;
@@ -155,11 +156,10 @@ public class Jpa20BeanManager extends BeanManager {
     }
 
     private JpaBean createJpaBean(Bean bean) {
-        JpaBean jpaBean = findEagerJpaBean(bean.getId());
-        if (jpaBean != null) {
+        if (exists(bean.getId())) {
             throw CFG303_BEAN_ALREADY_EXIST(bean.getId());
         }
-        jpaBean = new JpaBean(bean);
+        JpaBean jpaBean = new JpaBean(bean);
         getEm().persist(jpaBean);
         createJpaProperties(bean);
         return jpaBean;

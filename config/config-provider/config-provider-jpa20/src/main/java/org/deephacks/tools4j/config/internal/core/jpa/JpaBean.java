@@ -91,6 +91,7 @@ public class JpaBean implements Serializable {
             return;
         }
         result.put(jpaBean.getId(), jpaBean);
+
         for (JpaRef jpaRef : JpaRef.findReferences(jpaBean.getId())) {
 
             collectRefs(getJpaBeanAndProperties(jpaRef.getTarget()), result);
@@ -131,7 +132,7 @@ public class JpaBean implements Serializable {
     protected static final String FIND_BEANS_HIBERNATE = "SELECT e FROM JpaBean e WHERE (e.pk.id IN (:ids) AND e.pk.schemaName IN (:schemaNames))";
 
     @SuppressWarnings("unchecked")
-    public static List<JpaBean> findJpaBeans(List<BeanId> beanIds) {
+    public static List<JpaBean> findJpaBeansAndProperties(List<BeanId> beanIds) {
         String queryString = FIND_BEANS_DEFAULT;
         if (getEm().getClass().getName().contains("hibernate")) {
             /**
@@ -204,6 +205,19 @@ public class JpaBean implements Serializable {
             bean.references.add(ref);
             initReferences(refBean, successors);
         }
+    }
+
+    public static boolean exists(BeanId id) {
+        Query query = getEm().createNamedQuery(FIND_BEAN_FROM_BEANID_NAME);
+        query.setParameter(1, id.getInstanceId());
+        query.setParameter(2, id.getSchemaName());
+        JpaBean bean;
+        try {
+            bean = (JpaBean) query.getSingleResult();
+        } catch (NoResultException e) {
+            return false;
+        }
+        return true;
     }
 
     private static JpaBean getJpaBeanAndProperties(BeanId id) {
