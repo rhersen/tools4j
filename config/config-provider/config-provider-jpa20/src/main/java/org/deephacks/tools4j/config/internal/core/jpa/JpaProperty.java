@@ -21,6 +21,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.UUID;
 
 import javax.persistence.Column;
@@ -31,6 +32,7 @@ import javax.persistence.NamedQuery;
 import javax.persistence.Query;
 import javax.persistence.Table;
 
+import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
 
 import com.google.common.base.Objects;
@@ -54,6 +56,15 @@ import com.google.common.base.Objects;
                 query = JpaProperty.FIND_PROPERTIES_FOR_BEAN) })
 public class JpaProperty implements Serializable {
     private static final long serialVersionUID = -8467786505761160478L;
+    /**
+     * This property ensure that there will be one row in the
+     * properties table for every bean.
+     * 
+     * The purpose is to reduce number of SQL calls and increase database 
+     * performance. With this special property, fetching beans and properties 
+     * need only consult one table and no JOINS are needed. 
+     */
+    private static final String BEAN_MARKER_PROPERTY_NAME = "#BEAN_MARKER_PROPERTY#";
 
     @Id
     @Column(name = "UUID")
@@ -71,14 +82,34 @@ public class JpaProperty implements Serializable {
     @Column(name = "PROP_VALUE")
     private String value;
 
-    protected static final String DELETE_ALL_PROPERTIES_FOR_BEANID = "DELETE FROM JpaProperty e WHERE e.id = ?1 AND e.schemaName= ?2";
+    protected static final String DELETE_ALL_PROPERTIES_FOR_BEANID = "DELETE FROM JpaProperty e WHERE e.id = ?1 AND e.schemaName= ?2 AND NOT (e.propName = ?3)";
     protected static final String DELETE_ALL_PROPERTIES_FOR_BEANID_NAME = "DELETE_ALL_PROPERTIES_FOR_BEANID";
 
+    /**
+     * Delete all properties EXCEPT the marker. This is useful for 'set' operations
+     * that need to clear existing properties. 
+     */
     public static void deleteProperties(BeanId id) {
         Query query = getEm().createNamedQuery(DELETE_ALL_PROPERTIES_FOR_BEANID_NAME);
         query.setParameter(1, id.getInstanceId());
         query.setParameter(2, id.getSchemaName());
+
+        query.setParameter(3, BEAN_MARKER_PROPERTY_NAME);
         query.executeUpdate();
+
+    }
+
+    /**
+     * Deletes the JpaBean and all its properties and the marker.  
+     */
+    public static void deletePropertiesAndMarker(BeanId id) {
+        Query query = getEm().createNamedQuery(DELETE_ALL_PROPERTIES_FOR_BEANID_NAME);
+        query.setParameter(1, id.getInstanceId());
+        query.setParameter(2, id.getSchemaName());
+        // empty will marker will delete the marker aswell
+        query.setParameter(3, "");
+        query.executeUpdate();
+
     }
 
     protected static final String DELETE_PROPERTY_FOR_BEANID = "DELETE FROM JpaProperty e WHERE e.id = ?1 AND e.schemaName= ?2 AND e.propName = ?3";
@@ -100,7 +131,8 @@ public class JpaProperty implements Serializable {
         Query query = getEm().createNamedQuery(FIND_PROPERTIES_FOR_BEAN_NAME);
         query.setParameter(1, id.getInstanceId());
         query.setParameter(2, id.getSchemaName());
-        return (List<JpaProperty>) query.getResultList();
+        List<JpaProperty> properties = (List<JpaProperty>) query.getResultList();
+        return properties;
     }
 
     protected static final String FIND_PROPERTIES_FOR_BEANS_DEFAULT = "SELECT e FROM JpaProperty e WHERE (e.id IN :ids AND e.schemaName IN :schemaNames)";
@@ -129,7 +161,8 @@ public class JpaProperty implements Serializable {
         }
         query.setParameter("ids", ids);
         query.setParameter("schemaNames", schemaNames);
-        return (List<JpaProperty>) query.getResultList();
+        List<JpaProperty> properties = (List<JpaProperty>) query.getResultList();
+        return properties;
     }
 
     public JpaProperty() {
@@ -158,6 +191,38 @@ public class JpaProperty implements Serializable {
 
     public void setValue(String value) {
         this.value = value;
+    }
+
+    /**
+     * This property ensure that there will be one row in the
+     * properties table for every bean.
+     * 
+     * The purpose of creating a special property for a JpaBean is to 
+     * reduce number of SQL calls and increase database performance.  
+     * With the marker, we can fetch beans directly from the properties 
+     * table immediatly without first consulting the beans table.
+     */
+    public static void markBeanWithProperty(Bean bean) {
+        bean.addProperty(BEAN_MARKER_PROPERTY_NAME, "");
+    }
+
+    public static void unmarkBeanWithProperty(Bean bean) {
+        bean.remove(BEAN_MARKER_PROPERTY_NAME);
+    }
+
+    /**
+     * This property has no other meaning than knowing that a bean
+     * exits only by looking at the properties table.
+     * 
+     * So remove the marker property from result of a fetch operation.
+     */
+    public static void filterMarkerProperty(List<JpaProperty> properties) {
+        ListIterator<JpaProperty> propIt = properties.listIterator();
+        while (propIt.hasNext()) {
+            if (BEAN_MARKER_PROPERTY_NAME.equals(propIt.next().getPropertyName())) {
+                propIt.remove();
+            }
+        }
     }
 
     @Override

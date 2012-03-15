@@ -15,7 +15,7 @@ package org.deephacks.tools4j.config.internal.core.jpa;
 
 import static com.google.common.base.Objects.equal;
 import static com.google.common.base.Objects.toStringHelper;
-import static org.deephacks.tools4j.config.internal.core.jpa.JpaProperty.deleteProperties;
+import static org.deephacks.tools4j.config.internal.core.jpa.JpaProperty.deletePropertiesAndMarker;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaRef.deleteReferences;
 import static org.deephacks.tools4j.config.model.Events.CFG304_BEAN_DOESNT_EXIST;
 import static org.deephacks.tools4j.support.web.jpa.ThreadLocalEntityManager.getEm;
@@ -229,17 +229,19 @@ public class JpaBean implements Serializable {
         return true;
     }
 
+    /**
+     * Need not consult the JpaBean table since the property marker 
+     * in JpaProperties table is an indicator that the JpaBean really 
+     * exist, even if it has no properties. 
+     */
     private static JpaBean getJpaBeanAndProperties(BeanId id) {
-        Query query = getEm().createNamedQuery(FIND_BEAN_FROM_BEANID_NAME);
-        query.setParameter(1, id.getInstanceId());
-        query.setParameter(2, id.getSchemaName());
-        JpaBean bean;
-        try {
-            bean = (JpaBean) query.getSingleResult();
-        } catch (NoResultException e) {
+        List<JpaProperty> props = JpaProperty.findProperties(id);
+        if (props.size() == 0) {
+            // no marker, bean does not exist
             return null;
         }
-        List<JpaProperty> props = JpaProperty.findProperties(bean.getId());
+        JpaBean bean = new JpaBean(new JpaBeanPk(id));
+        JpaProperty.filterMarkerProperty(props);
         bean.properties.addAll(props);
         return bean;
     }
@@ -248,7 +250,7 @@ public class JpaBean implements Serializable {
     protected static final String DELETE_BEAN_USING_BEANID_NAME = "DELETE_BEAN_USING_BEANID_NAME";
 
     public static void deleteJpaBean(BeanId id) {
-        deleteProperties(id);
+        deletePropertiesAndMarker(id);
         deleteReferences(id);
         Query query = getEm().createNamedQuery(DELETE_BEAN_USING_BEANID_NAME);
         query.setParameter(1, id.getInstanceId());

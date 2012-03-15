@@ -122,7 +122,7 @@ public class Jpa20BeanManager extends BeanManager {
             getEm().persist(jpaBeanSingleton);
 
             jpaBean = new JpaBean(new JpaBeanPk(singleton));
-            getEm().persist(jpaBean);
+            createJpaBean(Bean.create(singleton));
             commit();
         } catch (Throwable e) {
             rollback();
@@ -161,7 +161,11 @@ public class Jpa20BeanManager extends BeanManager {
         }
         JpaBean jpaBean = new JpaBean(bean);
         getEm().persist(jpaBean);
+        JpaProperty.markBeanWithProperty(bean);
         createJpaProperties(bean);
+        // This is a by-reference call. Clean the property 
+        // to avoid affecting the client.
+        JpaProperty.unmarkBeanWithProperty(bean);
         return jpaBean;
     }
 

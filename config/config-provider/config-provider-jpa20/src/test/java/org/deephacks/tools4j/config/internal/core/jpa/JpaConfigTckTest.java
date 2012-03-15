@@ -122,7 +122,7 @@ public class JpaConfigTckTest extends ConfigTckTests {
     /**
      * Test method for doing ad-hoc testing. Uncomment to use.
      */
-    // @Test
+    //    @Test
     public void testMultiple() {
         BeanId id1 = BeanId.create("id1", "schema1");
         BeanId id2 = BeanId.create("id2", "schema2");
@@ -132,7 +132,7 @@ public class JpaConfigTckTest extends ConfigTckTests {
         Bean b2 = Bean.create(id2);
         b2.addProperty("prop2", "prop2");
         new Jpa20BeanManager().create(Arrays.asList(b1, b2));
-        List<JpaBean> beans = JpaBean.findJpaBeans(Arrays.asList(id1, id2));
+        List<JpaBean> beans = JpaBean.findJpaBeansAndProperties(Arrays.asList(id1, id2));
         for (JpaBean jpaBean : beans) {
             System.out.println(jpaBean.getId() + " " + jpaBean.getProperties());
         }
@@ -141,7 +141,7 @@ public class JpaConfigTckTest extends ConfigTckTests {
     @Parameters
     public static Collection<Object[]> data() {
         Collection<Object[]> parameters = new ArrayList<Object[]>();
-        List<String> dbProviders = Arrays.asList(MYSQL, POSTGRESQL, DERBY);
+        List<String> dbProviders = Arrays.asList(DERBY);
         List<String> jpaProviders = Arrays.asList(HIBERNATE, ECLIPSELINK);
         List<List<String>> list = new ArrayList<List<String>>();
         list.add(dbProviders);

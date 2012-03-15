@@ -30,6 +30,10 @@ import javax.persistence.Table;
 
 import com.google.common.base.Objects;
 
+/**
+ * The purpose of this entity is to keep track of what beans are singletons.
+ * 
+ */
 @Entity
 @Table(name = "CONFIG_BEAN_SINGLETON")
 @NamedQueries({ @NamedQuery(name = JpaBeanSingleton.FIND_BEAN_FROM_SCHEMA_NAME,
