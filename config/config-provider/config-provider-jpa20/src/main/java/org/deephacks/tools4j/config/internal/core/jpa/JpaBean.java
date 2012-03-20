@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -42,6 +43,7 @@ import org.deephacks.tools4j.config.model.Bean;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.Multimap;
 
 /**
  * JpaBean is a jpa entity that represent a Bean.
@@ -95,10 +97,75 @@ public class JpaBean implements Serializable {
         result.put(jpaBean.getId(), jpaBean);
 
         for (JpaRef jpaRef : JpaRef.findReferences(jpaBean.getId())) {
-
             collectRefs(getJpaBeanAndProperties(jpaRef.getTarget()), result);
             jpaBean.addReference(jpaRef);
         }
+    }
+
+    public static List<JpaBean> findEagerJpaBean(Set<BeanId> id) {
+        List<JpaProperty> result = JpaProperty.findProperties(id);
+        if (result.size() == 0) {
+            // beans does not exist
+            return new ArrayList<JpaBean>();
+        }
+        List<JpaBean> jpaBeans = JpaSupport.toJpaBeans(result);
+
+        Map<BeanId, JpaBean> refs = new HashMap<BeanId, JpaBean>();
+        // collect recursivley
+        collectRefs(jpaBeans, refs);
+        // now ready to associate references with correct JpaBean
+        for (JpaBean jpaBean : refs.values()) {
+            for (JpaRef ref : jpaBean.getReferences()) {
+                JpaBean bean = refs.get(ref.getTarget());
+                ref.setTargetBean(bean);
+            }
+        }
+        return jpaBeans;
+    }
+
+    private static void collectRefs(List<JpaBean> jpaBeans, Map<BeanId, JpaBean> result) {
+        ListIterator<JpaBean> it = jpaBeans.listIterator();
+        while (it.hasNext()) {
+            JpaBean next = it.next();
+            if (result.containsKey(next.getId())) {
+                // break redundant selects and circular references
+                it.remove();
+                continue;
+            }
+            result.put(next.getId(), next);
+        }
+
+        Multimap<BeanId, JpaRef> refs = JpaRef.findReferences(jpaBeans);
+        setReferences(jpaBeans, refs);
+        // only recurse instances not yet initalized
+        Set<BeanId> refIds = filterUninitalized(refs, result);
+        if (refIds.size() == 0) {
+            return;
+        }
+        List<JpaBean> initalized = findJpaBeansAndProperties(refIds);
+        collectRefs(initalized, result);
+    }
+
+    private static void setReferences(List<JpaBean> jpaBeans, Multimap<BeanId, JpaRef> refs) {
+        for (JpaBean jpaBean : jpaBeans) {
+            Collection<JpaRef> jpaRefs = refs.get(jpaBean.getId());
+            jpaBean.references.addAll(jpaRefs);
+        }
+
+    }
+
+    private static Set<BeanId> filterUninitalized(Multimap<BeanId, JpaRef> refs,
+            Map<BeanId, JpaBean> result) {
+        Set<BeanId> ids = new HashSet<BeanId>();
+        for (JpaRef ref : refs.values()) {
+            // only add if not in result already
+            if (!result.containsKey(ref.getTarget())) {
+                ids.add(ref.getTarget());
+            }
+
+        }
+        return ids;
+
     }
 
     public static JpaBean findLazyJpaBean(BeanId id) {
@@ -141,7 +208,7 @@ public class JpaBean implements Serializable {
      * another query. References are not fetched.  
      */
     @SuppressWarnings("unchecked")
-    public static List<JpaBean> findJpaBeansAndProperties(List<BeanId> beanIds) {
+    public static List<JpaBean> findJpaBeansAndProperties(Set<BeanId> beanIds) {
         String namedQuery = FIND_BEANS_DEFAULT_NAME;
         if (getEm().getClass().getName().contains("hibernate")) {
             /**

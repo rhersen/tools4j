@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.persistence.Column;
@@ -52,9 +53,14 @@ import com.google.common.base.Objects;
                 query = JpaProperty.FIND_PROPERTIES_FOR_BEANS_DEFAULT),
         @NamedQuery(name = JpaProperty.FIND_PROPERTIES_FOR_BEANS_HIBERNATE_NAME,
                 query = JpaProperty.FIND_PROPERTIES_FOR_BEANS_HIBERNATE),
+        @NamedQuery(name = JpaProperty.FIND_PROPERTIES_FOR_SCHEMA_DEFAULT_NAME,
+                query = JpaProperty.FIND_PROPERTIES_FOR_SCHEMA_DEFAULT),
+        @NamedQuery(name = JpaProperty.FIND_PROPERTIES_FOR_SCHEMA_HIBERNATE_NAME,
+                query = JpaProperty.FIND_PROPERTIES_FOR_SCHEMA_HIBERNATE),
         @NamedQuery(name = JpaProperty.FIND_PROPERTIES_FOR_BEAN_NAME,
                 query = JpaProperty.FIND_PROPERTIES_FOR_BEAN) })
 public class JpaProperty implements Serializable {
+
     private static final long serialVersionUID = -8467786505761160478L;
     /**
      * This property ensure that there will be one row in the
@@ -142,7 +148,7 @@ public class JpaProperty implements Serializable {
     protected static final String FIND_PROPERTIES_FOR_BEANS_HIBERNATE_NAME = "FIND_PROPERTIES_FOR_BEANS_HIBERNATE_NAME";
 
     @SuppressWarnings("unchecked")
-    public static List<JpaProperty> findProperties(List<BeanId> beanIds) {
+    public static List<JpaProperty> findProperties(Set<BeanId> beanIds) {
         String namedQuery = FIND_PROPERTIES_FOR_BEANS_DEFAULT_NAME;
         if (getEm().getClass().getName().contains("hibernate")) {
             /**
@@ -160,6 +166,32 @@ public class JpaProperty implements Serializable {
             schemaNames.add(id.getSchemaName());
         }
         query.setParameter("ids", ids);
+        query.setParameter("schemaNames", schemaNames);
+        List<JpaProperty> properties = (List<JpaProperty>) query.getResultList();
+        JpaSupport.filterUnwantedReferences(properties, beanIds);
+        return properties;
+    }
+
+    protected static final String FIND_PROPERTIES_FOR_SCHEMA_DEFAULT = "SELECT e FROM JpaProperty e WHERE (e.id IN :ids AND e.schemaName IN :schemaNames)";
+    protected static final String FIND_PROPERTIES_FOR_SCHEMA_DEFAULT_NAME = "FIND_PROPERTIES_FOR_SCHEMA_DEFAULT_NAME";
+
+    protected static final String FIND_PROPERTIES_FOR_SCHEMA_HIBERNATE = "SELECT e FROM JpaProperty e WHERE (e.schemaName IN (:schemaNames))";
+    protected static final String FIND_PROPERTIES_FOR_SCHEMA_HIBERNATE_NAME = "FIND_PROPERTIES_FOR_SCHEMA_HIBERNATE_NAME";
+
+    @SuppressWarnings("unchecked")
+    public static List<JpaProperty> findProperties(String schemaName) {
+        String namedQuery = FIND_PROPERTIES_FOR_SCHEMA_DEFAULT_NAME;
+        if (getEm().getClass().getName().contains("hibernate")) {
+            /**
+             * Hibernate and EclipseLink treat IN queries differently. 
+             * EclipseLink mandates NO brackets, while hibernate mandates WITH brackets.
+             * In order to support both, this ugly hack is needed. 
+             */
+            namedQuery = FIND_PROPERTIES_FOR_SCHEMA_HIBERNATE_NAME;
+        }
+        Query query = getEm().createNamedQuery(namedQuery);
+        Collection<String> schemaNames = new ArrayList<String>();
+        schemaNames.add(schemaName);
         query.setParameter("schemaNames", schemaNames);
         List<JpaProperty> properties = (List<JpaProperty>) query.getResultList();
         return properties;

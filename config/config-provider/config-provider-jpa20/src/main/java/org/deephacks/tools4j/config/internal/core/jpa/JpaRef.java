@@ -17,6 +17,8 @@ import static com.google.common.base.Objects.equal;
 import static org.deephacks.tools4j.support.web.jpa.ThreadLocalEntityManager.getEm;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +34,8 @@ import javax.persistence.Transient;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 
 @Entity
 @Table(name = "CONFIG_BEAN_REF")
@@ -40,6 +44,10 @@ import com.google.common.base.Objects;
                 query = JpaRef.DELETE_REF_USING_BEANID),
         @NamedQuery(name = JpaRef.DELETE_REF_USING_PROPNAME_NAME,
                 query = JpaRef.DELETE_REF_USING_PROPNAME),
+        @NamedQuery(name = JpaRef.FIND_REFS_FOR_BEANS_HIBERNATE_NAME,
+                query = JpaRef.FIND_REFS_FOR_BEANS_HIBERNATE),
+        @NamedQuery(name = JpaRef.FIND_REFS_FOR_BEANS_DEFAULT_NAME,
+                query = JpaRef.FIND_REFS_FOR_BEANS_DEFAULT),
         @NamedQuery(name = JpaRef.FIND_REFS_FOR_BEAN_NAME, query = JpaRef.FIND_REFS_FOR_BEAN),
         @NamedQuery(name = JpaRef.FIND_PREDECESSORS_FOR_BEAN_NAME,
                 query = JpaRef.FIND_PREDECESSORS_FOR_BEAN) })
@@ -99,6 +107,41 @@ public class JpaRef implements Serializable {
         query.setParameter(2, id.getSchemaName());
         List<JpaRef> result = (List<JpaRef>) query.getResultList();
         return result;
+    }
+
+    protected static final String FIND_REFS_FOR_BEANS_DEFAULT = "SELECT e FROM JpaRef e WHERE (e.sourceId IN :ids AND e.sourceSchemaName IN :schemaNames)";
+    protected static final String FIND_REFS_FOR_BEANS_DEFAULT_NAME = "FIND_REFS_FOR_BEANS_DEFAULT_NAME";
+
+    protected static final String FIND_REFS_FOR_BEANS_HIBERNATE = "SELECT e FROM JpaRef e WHERE (e.sourceId IN (:ids) AND e.sourceSchemaName IN (:schemaNames))";
+    protected static final String FIND_REFS_FOR_BEANS_HIBERNATE_NAME = "FIND_REFS_FOR_BEANS_HIBERNATE_NAME";
+
+    @SuppressWarnings("unchecked")
+    public static Multimap<BeanId, JpaRef> findReferences(Collection<JpaBean> beans) {
+        Multimap<BeanId, JpaRef> refs = HashMultimap.create();
+        String namedQuery = FIND_REFS_FOR_BEANS_DEFAULT_NAME;
+        if (getEm().getClass().getName().contains("hibernate")) {
+            /**
+             * Hibernate and EclipseLink treat IN queries differently. 
+             * EclipseLink mandates NO brackets, while hibernate mandates WITH brackets.
+             * In order to support both, this ugly hack is needed. 
+             */
+            namedQuery = FIND_REFS_FOR_BEANS_HIBERNATE_NAME;
+        }
+        Query query = getEm().createNamedQuery(namedQuery);
+        Collection<String> ids = new ArrayList<String>();
+        Collection<String> schemaNames = new ArrayList<String>();
+        for (JpaBean bean : beans) {
+            ids.add(bean.getId().getInstanceId());
+            schemaNames.add(bean.getId().getSchemaName());
+        }
+        query.setParameter("ids", ids);
+        query.setParameter("schemaNames", schemaNames);
+        List<JpaRef> result = (List<JpaRef>) query.getResultList();
+        JpaSupport.filterUnwantedReferences(result, beans);
+        for (JpaRef jpaRef : result) {
+            refs.put(jpaRef.getSource(), jpaRef);
+        }
+        return refs;
     }
 
     protected static final String FIND_PREDECESSORS_FOR_BEAN = "SELECT e FROM JpaRef e WHERE e.targetId= ?1 AND e.targetSchemaName= ?2";
@@ -162,7 +205,7 @@ public class JpaRef implements Serializable {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(JpaRef.class)
+        return Objects.toStringHelper(JpaRef.class).add("propertyName", propertyName)
                 .add("source", sourceId + "@" + sourceSchemaName)
                 .add("target", targetId + "@" + targetSchemaName).toString();
     }
