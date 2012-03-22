@@ -45,7 +45,7 @@ public class JpaBeanQueryAssembler {
     /**
      * Contains the bean ids of the beans that were queries for.
      */
-    private Set<BeanId> query = new HashSet<BeanId>();
+    private Set<BeanId> beansQuery = new HashSet<BeanId>();
     /**
      * Contain all beans references.
      */
@@ -56,7 +56,7 @@ public class JpaBeanQueryAssembler {
     private Map<BeanId, Bean> beans = new HashMap<BeanId, Bean>();
 
     public JpaBeanQueryAssembler(Set<BeanId> query) {
-        this.query = query;
+        this.beansQuery = query;
     }
 
     /**
@@ -99,7 +99,7 @@ public class JpaBeanQueryAssembler {
      */
     public Set<BeanId> getIds() {
         Set<BeanId> ids = new HashSet<BeanId>();
-        ids.addAll(query);
+        ids.addAll(beansQuery);
         ids.addAll(beans.keySet());
         return ids;
     }
@@ -131,6 +131,28 @@ public class JpaBeanQueryAssembler {
      * @return the beans that were provided in the inital query. 
      */
     public List<Bean> assembleBeans() {
+        connectReferences();
+
+        if (beansQuery.size() == 0) {
+            // if no specific beans where requested (such as query for a 
+            // specific schema) return what is available.
+            return new ArrayList<Bean>(beans.values());
+        }
+        List<Bean> initalQuery = new ArrayList<Bean>();
+        for (BeanId id : beansQuery) {
+            Bean bean = beans.get(id);
+            if (bean == null) {
+                throw CFG304_BEAN_DOESNT_EXIST(id);
+            }
+            initalQuery.add(beans.get(id));
+        }
+        return initalQuery;
+    }
+
+    /**
+     * Assemble beans and initalize references from what have been provided. 
+     */
+    private void connectReferences() {
         // ready to associate initalized beans with references
         for (Bean bean : beans.values()) {
             for (JpaRef ref : refs.get(bean.getId())) {
@@ -140,16 +162,5 @@ public class JpaBeanQueryAssembler {
                 bean.addReference(ref.getPropertyName(), target);
             }
         }
-
-        List<Bean> initalQuery = new ArrayList<Bean>();
-
-        for (BeanId id : query) {
-            Bean bean = beans.get(id);
-            if (bean == null) {
-                throw CFG304_BEAN_DOESNT_EXIST(id);
-            }
-            initalQuery.add(beans.get(id));
-        }
-        return initalQuery;
     }
 }

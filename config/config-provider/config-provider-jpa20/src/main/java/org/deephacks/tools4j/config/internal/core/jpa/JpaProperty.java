@@ -195,7 +195,7 @@ public class JpaProperty implements Serializable {
         }
     }
 
-    protected static final String FIND_PROPERTIES_FOR_SCHEMA_DEFAULT = "SELECT e FROM JpaProperty e WHERE (e.id IN :ids AND e.schemaName IN :schemaNames)";
+    protected static final String FIND_PROPERTIES_FOR_SCHEMA_DEFAULT = "SELECT e FROM JpaProperty e WHERE (e.schemaName IN :schemaNames)";
     protected static final String FIND_PROPERTIES_FOR_SCHEMA_DEFAULT_NAME = "FIND_PROPERTIES_FOR_SCHEMA_DEFAULT_NAME";
 
     protected static final String FIND_PROPERTIES_FOR_SCHEMA_HIBERNATE = "SELECT e FROM JpaProperty e WHERE (e.schemaName IN (:schemaNames))";

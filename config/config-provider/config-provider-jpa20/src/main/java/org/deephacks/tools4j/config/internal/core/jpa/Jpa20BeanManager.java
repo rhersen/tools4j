@@ -19,7 +19,6 @@ import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.deleteJpaBe
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.exists;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.findEager;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.findEagerJpaBean;
-import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.findJpaBeans;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.findLazyJpaBean;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBeanSingleton.isJpaBeanSingleton;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaProperty.deleteProperties;
@@ -141,7 +140,7 @@ public class Jpa20BeanManager extends BeanManager {
                 throw new IllegalArgumentException("Schema [" + schemaName
                         + "] is not a singleton.");
             }
-            List<JpaBean> singleton = findJpaBeans(schemaName);
+            List<Bean> singleton = findEager(schemaName);
             if (singleton.isEmpty()) {
                 throw new IllegalArgumentException(
                         "There is no singleton instance, which is not allowed.");
@@ -151,7 +150,7 @@ public class Jpa20BeanManager extends BeanManager {
                         "There are several singleton instances, which is not allowed.");
             }
             commit();
-            return conversion.convert(singleton.get(0), Bean.class);
+            return singleton.get(0);
         } catch (Throwable e) {
             rollback();
             throw e;
@@ -355,10 +354,9 @@ public class Jpa20BeanManager extends BeanManager {
     public Map<BeanId, Bean> list(String schemaName) {
         try {
             begin();
-            List<JpaBean> beans = findJpaBeans(schemaName);
-            Map<BeanId, Bean> map = toBeans(beans);
+            List<Bean> beans = findEager(schemaName);
             commit();
-            return map;
+            return uniqueIndex(beans);
         } catch (Throwable e) {
             rollback();
             throw e;
@@ -474,10 +472,6 @@ public class Jpa20BeanManager extends BeanManager {
         deleteReferences(bean.getId());
         createJpaProperties(bean);
         createJpaRefs(bean);
-    }
-
-    private Map<BeanId, Bean> toBeans(List<JpaBean> jpabeans) {
-        return uniqueIndex(conversion.convert(jpabeans, Bean.class));
     }
 
 }

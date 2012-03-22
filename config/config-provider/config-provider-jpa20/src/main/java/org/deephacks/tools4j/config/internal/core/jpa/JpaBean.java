@@ -100,6 +100,9 @@ public class JpaBean implements Serializable {
     }
 
     public static List<Bean> findEager(Set<BeanId> ids) {
+        if (ids.size() == 0) {
+            return new ArrayList<Bean>();
+        }
         JpaBeanQueryAssembler query = new JpaBeanQueryAssembler(ids);
         // collect references recursivley
         collectRefs(ids, query);
@@ -159,15 +162,15 @@ public class JpaBean implements Serializable {
     protected static final String FIND_BEANS_FROM_SCHEMA_NAME = "FIND_BEANS_FROM_SCHEMA_NAME";
 
     @SuppressWarnings("unchecked")
-    public static List<JpaBean> findJpaBeans(String schemaName) {
+    public static List<Bean> findEager(String schemaName) {
         Query query = getEm().createNamedQuery(FIND_BEANS_FROM_SCHEMA_NAME);
         query.setParameter(1, schemaName);
         List<JpaBean> beans = (List<JpaBean>) query.getResultList();
-        List<JpaBean> result = new ArrayList<JpaBean>();
-        for (JpaBean bean : beans) {
-            result.add(findEagerJpaBean(bean.getId()));
+        Set<BeanId> ids = new HashSet<BeanId>();
+        for (JpaBean jpaBean : beans) {
+            ids.add(jpaBean.getId());
         }
-        return result;
+        return findEager(ids);
     }
 
     /**
