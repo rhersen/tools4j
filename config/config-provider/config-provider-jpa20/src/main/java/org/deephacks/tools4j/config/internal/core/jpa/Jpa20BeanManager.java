@@ -17,6 +17,7 @@ import static org.deephacks.tools4j.config.internal.core.jpa.ExceptionTranslator
 import static org.deephacks.tools4j.config.internal.core.jpa.ExceptionTranslator.translateMerge;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.deleteJpaBean;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.exists;
+import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.findEager;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.findEagerJpaBean;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.findJpaBeans;
 import static org.deephacks.tools4j.config.internal.core.jpa.JpaBean.findLazyJpaBean;
@@ -52,6 +53,8 @@ import org.deephacks.tools4j.support.conversion.Conversion;
 import org.deephacks.tools4j.support.event.AbortRuntimeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Sets;
 
 /**
  * JpaBeanManager is responsible for driving transactions, joining/starting and rolling them back.
@@ -164,7 +167,7 @@ public class Jpa20BeanManager extends BeanManager {
         JpaProperty.markBeanWithProperty(bean);
         createJpaProperties(bean);
         // This is a by-reference call. Clean the property 
-        // to avoid affecting the client.
+        // to avoid side-effects in client.
         JpaProperty.unmarkBeanWithProperty(bean);
         return jpaBean;
     }
@@ -267,12 +270,12 @@ public class Jpa20BeanManager extends BeanManager {
     public Bean getEager(BeanId id) {
         try {
             begin();
-            JpaBean bean = findEagerJpaBean(id);
-            if (bean == null) {
+            List<Bean> beans = findEager(Sets.newHashSet(id));
+            if (beans.size() == 0) {
                 throw CFG304_BEAN_DOESNT_EXIST(id);
             }
             commit();
-            return conversion.convert(bean, Bean.class);
+            return beans.get(0);
         } catch (Throwable e) {
             rollback();
             throw e;

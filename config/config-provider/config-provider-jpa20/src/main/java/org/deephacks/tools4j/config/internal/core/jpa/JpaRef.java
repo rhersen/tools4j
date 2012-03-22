@@ -20,6 +20,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.persistence.Column;
@@ -34,7 +36,7 @@ import javax.persistence.Transient;
 import org.deephacks.tools4j.config.model.Bean.BeanId;
 
 import com.google.common.base.Objects;
-import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
 @Entity
@@ -116,8 +118,9 @@ public class JpaRef implements Serializable {
     protected static final String FIND_REFS_FOR_BEANS_HIBERNATE_NAME = "FIND_REFS_FOR_BEANS_HIBERNATE_NAME";
 
     @SuppressWarnings("unchecked")
-    public static Multimap<BeanId, JpaRef> findReferences(Collection<JpaBean> beans) {
-        Multimap<BeanId, JpaRef> refs = HashMultimap.create();
+    public static Multimap<BeanId, JpaRef> findReferences(Set<BeanId> beanIds) {
+        Multimap<BeanId, JpaRef> refs = ArrayListMultimap.create();
+
         String namedQuery = FIND_REFS_FOR_BEANS_DEFAULT_NAME;
         if (getEm().getClass().getName().contains("hibernate")) {
             /**
@@ -130,18 +133,37 @@ public class JpaRef implements Serializable {
         Query query = getEm().createNamedQuery(namedQuery);
         Collection<String> ids = new ArrayList<String>();
         Collection<String> schemaNames = new ArrayList<String>();
-        for (JpaBean bean : beans) {
-            ids.add(bean.getId().getInstanceId());
-            schemaNames.add(bean.getId().getSchemaName());
+        for (BeanId id : beanIds) {
+            ids.add(id.getInstanceId());
+            schemaNames.add(id.getSchemaName());
         }
         query.setParameter("ids", ids);
         query.setParameter("schemaNames", schemaNames);
         List<JpaRef> result = (List<JpaRef>) query.getResultList();
-        JpaSupport.filterUnwantedReferences(result, beans);
+        filterUnwantedReferences(result, beanIds);
         for (JpaRef jpaRef : result) {
             refs.put(jpaRef.getSource(), jpaRef);
         }
         return refs;
+    }
+
+    /**
+     * Beans with different schemaName may have same instance id.
+     *   
+     * The IN search query is greedy, finding instances that
+     * match any combination of instance id and schemaName. Hence, 
+     * the query may find references belonging to wrong schema 
+     * so filter those out. 
+     */
+    static void filterUnwantedReferences(List<JpaRef> result, Collection<BeanId> query) {
+        ListIterator<JpaRef> it = result.listIterator();
+        while (it.hasNext()) {
+            // remove reference from result that was not part of the query
+            BeanId found = it.next().getSource();
+            if (!query.contains(found)) {
+                it.remove();
+            }
+        }
     }
 
     protected static final String FIND_PREDECESSORS_FOR_BEAN = "SELECT e FROM JpaRef e WHERE e.targetId= ?1 AND e.targetSchemaName= ?2";

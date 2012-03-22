@@ -1,0 +1,30 @@
+Manifest-Version: 1.0
+Bnd-LastModified: 1332456491070
+Build-Jdk: 1.7.0_01
+Built-By: stoffe
+Bundle-Description: Service Providers for Tools4j Config
+Bundle-License: http://www.apache.org/licenses/LICENSE-2.0.txt
+Bundle-ManifestVersion: 2
+Bundle-Name: Tools4j Config Provider API
+Bundle-SymbolicName: org.deephacks.tools4j.config-provider-api
+Bundle-Version: 0.0.0.x
+Created-By: Apache Maven Bundle Plugin
+Export-Package: org.deephacks.tools4j.config.spi;uses:="org.deephacks.to
+ ols4j.support.event,org.deephacks.tools4j.config.model,org.jboss.shrink
+ wrap.api.asset,org.jboss.shrinkwrap.api.exporter,org.jboss.shrinkwrap.a
+ pi,org.jboss.shrinkwrap.api.spec,org.deephacks.tools4j.support,org.deep
+ hacks.tools4j.support.reflections";version="0.0.0.x"
+Implementation-Title: Tools4j Config Provider API
+Implementation-Vendor: deephacks
+Implementation-Vendor-Id: org.deephacks
+Implementation-Version: 0.0.0.x
+Import-Package: org.deephacks.tools4j.config.model;version="[0.0,1)",org
+ .deephacks.tools4j.support;version="[0.0,1)",org.deephacks.tools4j.supp
+ ort.event;version="[0.0,1)",org.deephacks.tools4j.support.reflections;v
+ ersion="[0.0,1)",org.jboss.shrinkwrap.api,org.jboss.shrinkwrap.api.asse
+ t,org.jboss.shrinkwrap.api.exporter,org.jboss.shrinkwrap.api.spec
+Specification-Title: Tools4j Config Provider API
+Specification-Vendor: deephacks
+Specification-Version: 0.0.0.x
+Tool: Bnd-1.50.0
+url: http://tools4j.deephacks.org

@@ -40,7 +40,7 @@ import com.google.common.base.Objects;
 
 /**
  * 
- * @author Kristoffer Sjogren / ekrisjo
+ * @author Kristoffer Sjogren
  */
 @Entity
 @Table(name = "CONFIG_PROPERTY")
@@ -70,7 +70,7 @@ public class JpaProperty implements Serializable {
      * performance. With this special property, fetching beans and properties 
      * need only consult one table and no JOINS are needed. 
      */
-    private static final String BEAN_MARKER_PROPERTY_NAME = "#BEAN_MARKER_PROPERTY#";
+    public static final String BEAN_MARKER_PROPERTY_NAME = "#BEAN_MARKER_PROPERTY#";
 
     @Id
     @Column(name = "UUID")
@@ -149,6 +149,9 @@ public class JpaProperty implements Serializable {
 
     @SuppressWarnings("unchecked")
     public static List<JpaProperty> findProperties(Set<BeanId> beanIds) {
+        if (beanIds.size() == 0) {
+            return new ArrayList<JpaProperty>();
+        }
         String namedQuery = FIND_PROPERTIES_FOR_BEANS_DEFAULT_NAME;
         if (getEm().getClass().getName().contains("hibernate")) {
             /**
@@ -167,9 +170,29 @@ public class JpaProperty implements Serializable {
         }
         query.setParameter("ids", ids);
         query.setParameter("schemaNames", schemaNames);
+
         List<JpaProperty> properties = (List<JpaProperty>) query.getResultList();
-        JpaSupport.filterUnwantedReferences(properties, beanIds);
+        filterUnwantedReferences(properties, beanIds);
         return properties;
+    }
+
+    /**
+     * Beans with different schemaName may have same instance id.
+     *   
+     * The IN search query is greedy, finding instances that
+     * match any combination of instance id and schemaName. Hence, 
+     * the query may find references belonging to wrong schema 
+     * so filter those out. 
+     */
+    static void filterUnwantedReferences(List<JpaProperty> result, Set<BeanId> query) {
+        ListIterator<JpaProperty> it = result.listIterator();
+        while (it.hasNext()) {
+            // remove property from result that was not part of the query
+            JpaProperty found = it.next();
+            if (!query.contains(found.getId())) {
+                it.remove();
+            }
+        }
     }
 
     protected static final String FIND_PROPERTIES_FOR_SCHEMA_DEFAULT = "SELECT e FROM JpaProperty e WHERE (e.id IN :ids AND e.schemaName IN :schemaNames)";

@@ -22,11 +22,9 @@ import static org.deephacks.tools4j.support.web.jpa.ThreadLocalEntityManager.get
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -57,8 +55,7 @@ import com.google.common.collect.Multimap;
                 query = JpaBean.FIND_BEAN_FROM_BEANID),
         @NamedQuery(name = JpaBean.FIND_BEANS_FROM_SCHEMA_NAME,
                 query = JpaBean.FIND_BEANS_FROM_SCHEMA),
-        @NamedQuery(name = JpaBean.FIND_BEANS_DEFAULT_NAME, query = JpaBean.FIND_BEANS_DEFAULT),
-        @NamedQuery(name = JpaBean.FIND_BEANS_HIBERNATE_NAME, query = JpaBean.FIND_BEANS_HIBERNATE),
+
         @NamedQuery(name = JpaBean.DELETE_BEAN_USING_BEANID_NAME,
                 query = JpaBean.DELETE_BEAN_USING_BEANID) })
 public class JpaBean implements Serializable {
@@ -102,70 +99,46 @@ public class JpaBean implements Serializable {
         }
     }
 
-    public static List<JpaBean> findEagerJpaBean(Set<BeanId> id) {
-        List<JpaProperty> result = JpaProperty.findProperties(id);
-        if (result.size() == 0) {
-            // beans does not exist
-            return new ArrayList<JpaBean>();
-        }
-        List<JpaBean> jpaBeans = JpaSupport.toJpaBeans(result);
+    public static List<Bean> findEager(Set<BeanId> ids) {
+        JpaBeanQueryAssembler query = new JpaBeanQueryAssembler(ids);
+        // collect references recursivley
+        collectRefs(ids, query);
 
-        Map<BeanId, JpaBean> refs = new HashMap<BeanId, JpaBean>();
-        // collect recursivley
-        collectRefs(jpaBeans, refs);
-        // now ready to associate references with correct JpaBean
-        for (JpaBean jpaBean : refs.values()) {
-            for (JpaRef ref : jpaBean.getReferences()) {
-                JpaBean bean = refs.get(ref.getTarget());
-                ref.setTargetBean(bean);
-            }
-        }
-        return jpaBeans;
+        // fetch properties for all beans at once
+        List<JpaProperty> allProperties = JpaProperty.findProperties(query.getIds());
+        query.addProperties(allProperties);
+
+        return query.assembleBeans();
     }
 
-    private static void collectRefs(List<JpaBean> jpaBeans, Map<BeanId, JpaBean> result) {
-        ListIterator<JpaBean> it = jpaBeans.listIterator();
-        while (it.hasNext()) {
-            JpaBean next = it.next();
-            if (result.containsKey(next.getId())) {
-                // break redundant selects and circular references
-                it.remove();
-                continue;
-            }
-            result.put(next.getId(), next);
-        }
-
-        Multimap<BeanId, JpaRef> refs = JpaRef.findReferences(jpaBeans);
-        setReferences(jpaBeans, refs);
-        // only recurse instances not yet initalized
-        Set<BeanId> refIds = filterUninitalized(refs, result);
-        if (refIds.size() == 0) {
-            return;
-        }
-        List<JpaBean> initalized = findJpaBeansAndProperties(refIds);
-        collectRefs(initalized, result);
-    }
-
-    private static void setReferences(List<JpaBean> jpaBeans, Multimap<BeanId, JpaRef> refs) {
-        for (JpaBean jpaBean : jpaBeans) {
-            Collection<JpaRef> jpaRefs = refs.get(jpaBean.getId());
-            jpaBean.references.addAll(jpaRefs);
-        }
-
-    }
-
-    private static Set<BeanId> filterUninitalized(Multimap<BeanId, JpaRef> refs,
-            Map<BeanId, JpaBean> result) {
+    private static Set<BeanId> uniqueSet(Multimap<BeanId, JpaRef> refs) {
         Set<BeanId> ids = new HashSet<BeanId>();
-        for (JpaRef ref : refs.values()) {
-            // only add if not in result already
-            if (!result.containsKey(ref.getTarget())) {
+        for (BeanId id : refs.keySet()) {
+            ids.add(id);
+            for (JpaRef ref : refs.get(id)) {
                 ids.add(ref.getTarget());
             }
-
         }
         return ids;
+    }
 
+    private static void collectRefs(Set<BeanId> predecessors, JpaBeanQueryAssembler query) {
+        Multimap<BeanId, JpaRef> successors = JpaRef.findReferences(predecessors);
+        if (successors.size() > 0) {
+            query.addRefs(predecessors);
+        }
+        // only recurse successors we havent already visited to break circular references
+        Set<BeanId> unvisitedSuccessors = new HashSet<BeanId>();
+        for (JpaRef successor : successors.values()) {
+            if (!query.contains(successor.getTarget())) {
+                unvisitedSuccessors.add(successor.getTarget());
+            }
+        }
+        if (unvisitedSuccessors.size() != 0) {
+            // we have reached the end and found all successors
+            collectRefs(unvisitedSuccessors, query);
+        }
+        query.addRefs(successors);
     }
 
     public static JpaBean findLazyJpaBean(BeanId id) {
@@ -195,48 +168,6 @@ public class JpaBean implements Serializable {
             result.add(findEagerJpaBean(bean.getId()));
         }
         return result;
-    }
-
-    protected static final String FIND_BEANS_DEFAULT = "SELECT e FROM JpaBean e WHERE (e.pk.id IN :ids AND e.pk.schemaName IN :schemaNames)";
-    protected static final String FIND_BEANS_DEFAULT_NAME = "FIND_BEANS_DEFAULT_NAME";
-
-    protected static final String FIND_BEANS_HIBERNATE = "SELECT e FROM JpaBean e WHERE (e.pk.id IN (:ids) AND e.pk.schemaName IN (:schemaNames))";
-    protected static final String FIND_BEANS_HIBERNATE_NAME = "FIND_BEANS_HIBERNATE_NAME";
-
-    /**
-     * This method fetch beans in one query then all their properties in 
-     * another query. References are not fetched.  
-     */
-    @SuppressWarnings("unchecked")
-    public static List<JpaBean> findJpaBeansAndProperties(Set<BeanId> beanIds) {
-        String namedQuery = FIND_BEANS_DEFAULT_NAME;
-        if (getEm().getClass().getName().contains("hibernate")) {
-            /**
-             * Hibernate and EclipseLink treat IN queries differently. 
-             * EclipseLink mandates NO brackets, while hibernate mandates WITH brackets.
-             * In order to support both, this ugly hack is needed.
-             */
-            namedQuery = FIND_BEANS_HIBERNATE_NAME;
-        }
-        Query query = getEm().createNamedQuery(namedQuery);
-        Collection<String> ids = new ArrayList<String>();
-        Collection<String> schemaNames = new ArrayList<String>();
-        for (BeanId id : beanIds) {
-            ids.add(id.getInstanceId());
-            schemaNames.add(id.getSchemaName());
-        }
-        query.setParameter("ids", ids);
-        query.setParameter("schemaNames", schemaNames);
-        List<JpaBean> beans = (List<JpaBean>) query.getResultList();
-        List<JpaProperty> props = JpaProperty.findProperties(beanIds);
-        for (JpaProperty jpaProperty : props) {
-            for (JpaBean jpaBean : beans) {
-                if (jpaBean.getId().equals(jpaProperty.getId())) {
-                    jpaBean.addProperty(jpaProperty);
-                }
-            }
-        }
-        return beans;
     }
 
     /**
