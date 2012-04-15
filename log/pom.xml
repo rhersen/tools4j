@@ -9,7 +9,7 @@
   <name>Tools4j Log</name>
   <description></description>
   <packaging>jar</packaging>
-  <version>0.0.x</version>
+  <version>0.0.0.x</version>
   <dependencies>
     <dependency>
       <groupId>com.googlecode.guava-osgi</groupId>

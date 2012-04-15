@@ -46,7 +46,7 @@
     <dependency>
       <groupId>org.deephacks.tools4j</groupId>
       <artifactId>support-jse</artifactId>
-      <version>0.0.x</version>
+      <version>0.0.0.x</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.guava-osgi</groupId>

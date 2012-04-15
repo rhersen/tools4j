@@ -15,7 +15,7 @@
   </modules>
 
   <properties>
-    <version.tools4j.cli>0.0.x</version.tools4j.cli>
+    <version.tools4j.cli>0.0.0.x</version.tools4j.cli>
   </properties>
 
   <dependencyManagement>
@@ -47,7 +47,7 @@
       <dependency>
         <groupId>org.deephacks.tools4j</groupId>
         <artifactId>log</artifactId>
-        <version>0.0.x</version>
+        <version>0.0.0.x</version>
         <scope>compile</scope>
       </dependency>
       <dependency>
