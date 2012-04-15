@@ -4,6 +4,7 @@
 ## How to build
 
 Make sure you have Maven and JDK 7 installed, and then just do:
+
     mvn install
 
 ## URLs
